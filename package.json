@@ -10,15 +10,20 @@
   },
   "dependencies": {
     "@fingerprintjs/fingerprintjs": "^4.6.1",
+    "@heroicons/react": "^2.2.0",
+    "@tensorflow/tfjs": "^4.22.0",
+    "mongodb": "^6.15.0",
+    "mongoose": "^8.13.1",
     "next": "15.2.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "recharts": "^2.15.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
+    "@types/node": "^20.17.30",
+    "@types/react": "^19.0.12",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.2.4",

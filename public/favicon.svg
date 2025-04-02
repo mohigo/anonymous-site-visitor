@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle -->
+  <circle cx="16" cy="16" r="16" fill="#2563EB"/>
+  
+  <!-- Fingerprint-like pattern -->
+  <path d="M12 8C12 8 14 10 16 10C18 10 20 8 20 8" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 12C12 12 14 14 16 14C18 14 20 12 20 12" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 16C12 16 14 18 16 18C18 18 20 16 20 16" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 20C12 20 14 22 16 22C18 22 20 20 20 20" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  
+  <!-- Dots for additional detail -->
+  <circle cx="16" cy="10" r="1" fill="white"/>
+  <circle cx="16" cy="14" r="1" fill="white"/>
+  <circle cx="16" cy="18" r="1" fill="white"/>
+  <circle cx="16" cy="22" r="1" fill="white"/>
+</svg> 
