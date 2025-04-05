@@ -154,10 +154,10 @@ export class MLFingerprint {
 
   private extractFeatures(visitor: VisitorData): FeatureVector {
     // Ensure all required fields have default values
-    const userAgent = navigator?.userAgent || 'unknown';
+    const userAgent = typeof window !== 'undefined' ? window.navigator.userAgent : 'unknown';
     const screenResolution = visitor.screenResolution || '1920x1080';
     const timestamp = visitor.timestamp || Date.now();
-    const browser = visitor.browser || 'unknown';
+    const browser = visitor.browser || this.detectBrowser();
 
     return {
       userAgentHash: this.hashString(userAgent),
@@ -167,8 +167,8 @@ export class MLFingerprint {
         Math.cos(2 * Math.PI * new Date(timestamp).getHours() / 24),
         Math.sin(2 * Math.PI * new Date(timestamp).getMinutes() / 60),
         Math.cos(2 * Math.PI * new Date(timestamp).getMinutes() / 60),
-        Math.sin(2 * Math.PI * new Date(timestamp).getSeconds() / 60),  // Added seconds
-        Math.cos(2 * Math.PI * new Date(timestamp).getSeconds() / 60)   // Added seconds
+        Math.sin(2 * Math.PI * new Date(timestamp).getSeconds() / 60),
+        Math.cos(2 * Math.PI * new Date(timestamp).getSeconds() / 60)
       ],
       browserFeatures: [
         browser === 'Chrome' ? 1 : 0,
@@ -176,7 +176,7 @@ export class MLFingerprint {
         browser === 'Safari' ? 1 : 0,
         browser === 'Edge' ? 1 : 0,
         browser === 'Opera' ? 1 : 0,
-        browser === 'Unknown' ? 1 : 0  // Added Unknown browser
+        browser === 'Unknown' ? 1 : 0
       ]
     };
   }
@@ -251,14 +251,21 @@ export class MLFingerprint {
   }
 
   private detectBrowser(): string {
-    if (typeof navigator === 'undefined') return 'unknown';
-    const ua = navigator.userAgent;
-    if (ua.includes('Opera') || ua.includes('OPR/')) return 'Opera';
-    if (ua.includes('Edg/')) return 'Edge';
-    if (ua.includes('Chrome/')) return 'Chrome';
-    if (ua.includes('Firefox/')) return 'Firefox';
-    if (ua.includes('Safari/')) return 'Safari';
-    return 'unknown';
+    if (typeof window === 'undefined') return 'Unknown';
+    
+    const userAgent = window.navigator.userAgent;
+    const isChrome = /Chrome/.test(userAgent) && !/Chromium|Edge/.test(userAgent);
+    const isFirefox = /Firefox/.test(userAgent);
+    const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
+    const isEdge = /Edge/.test(userAgent);
+    const isOpera = /Opera|OPR/.test(userAgent);
+
+    if (isChrome) return 'Chrome';
+    if (isFirefox) return 'Firefox';
+    if (isSafari) return 'Safari';
+    if (isEdge) return 'Edge';
+    if (isOpera) return 'Opera';
+    return 'Unknown';
   }
 
   private async detectCountry(): Promise<string> {

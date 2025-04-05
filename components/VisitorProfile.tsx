@@ -102,7 +102,9 @@ export default function VisitorProfile() {
         <div className="space-y-4">
           <div>
             <h3 className="text-sm font-medium text-gray-500">Visitor ID</h3>
-            <p className="mt-1 text-sm font-medium text-gray-700">{visitorData?.visitorId}</p>
+            <p className="mt-1 text-sm font-medium text-gray-700">
+              {visitorData?.visitorId || 'Not Available'}
+            </p>
           </div>
           
           <div>

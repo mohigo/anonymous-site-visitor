@@ -15,6 +15,13 @@ export interface VisitorData {
   };
   screenResolution: string;
   timestamp: number;
+  patterns?: {
+    behaviorPatterns: string[];
+    anomalyScore?: {
+      isAnomaly: boolean;
+      confidence: number;
+    };
+  };
 }
 
 export async function generateVisitorFingerprint(): Promise<VisitorData> {
@@ -122,20 +129,21 @@ export async function generateServerFingerprint(req: NextRequest): Promise<Visit
     browser = 'Edge';
   }
 
-  const visitorData = {
+  const now = new Date().toISOString();
+  const visitorData: VisitorData = {
     visitorId,
-    timestamp: Date.now(),
-    userAgent,
-    screenResolution: 'unknown', // We can't get this server-side
-    colorDepth: 24, // Default value
-    timezone: 'UTC', // Default value
-    language: acceptLanguage.split(',')[0],
+    firstVisit: now,
+    lastVisit: now,
+    visitCount: 1,
     browser,
     country,
+    preferences: {
+      theme: 'light',
+      language: acceptLanguage.split(',')[0]
+    },
+    screenResolution: 'unknown',
+    timestamp: Date.now()
   };
-
-  // Generate ML-based fingerprint
-  visitorData.visitorId = await mlFingerprint.generateFingerprint(visitorData);
 
   return visitorData;
 }
@@ -154,6 +162,6 @@ export function getStoredVisitorData(): VisitorData | null {
   return null;
 }
 
-export async function analyzeVisitorPatterns(visitors: VisitorData[]) {
-  return mlFingerprint.detectPatterns(visitors);
+export async function analyzeVisitorPatterns(visitor: VisitorData) {
+  return mlFingerprint.detectPatterns(visitor);
 } 
