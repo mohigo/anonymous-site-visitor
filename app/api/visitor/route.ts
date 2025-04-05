@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
-import { MongoClient } from 'mongodb';
+import clientPromise from '@/lib/mongodb';
 import { VisitorData } from '@/lib/fingerprint';
 import { generateServerFingerprint, analyzeVisitorPatterns } from '@/lib/fingerprint';
 
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const client = new MongoClient(uri);
 const dbName = 'visitor-analytics';
 
 export async function POST(request: Request) {
@@ -12,7 +10,7 @@ export async function POST(request: Request) {
     const visitor = await request.json();
     const now = new Date().toISOString();
     
-    await client.connect();
+    const client = await clientPromise;
     const db = client.db(dbName);
     const collection = db.collection('visitors');
 
@@ -57,14 +55,12 @@ export async function POST(request: Request) {
       { error: 'Failed to save visitor data' },
       { status: 500 }
     );
-  } finally {
-    await client.close();
   }
 }
 
 export async function GET(request: Request) {
   try {
-    await client.connect();
+    const client = await clientPromise;
     const db = client.db(dbName);
     const collection = db.collection('visitors');
 
@@ -126,8 +122,9 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error('Error fetching visitors:', error);
-    return NextResponse.json({ visitors: [] });
-  } finally {
-    await client.close();
+    return NextResponse.json(
+      { error: 'Failed to fetch visitors', visitors: [] },
+      { status: 500 }
+    );
   }
 } 

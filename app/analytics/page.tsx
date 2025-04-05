@@ -36,42 +36,59 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Add formatVisitorId function
+  const formatVisitorId = (id: string): string => {
+    if (!id) return 'Unknown';
+    
+    // If it's a hash-like string, truncate it
+    if (id.length > 8 && /^[0-9a-f]+$/.test(id)) {
+      return `${id.slice(0, 8)}...`;
+    }
+    
+    // If it's a numeric string with decimals
+    if (id.includes('.')) {
+      return 'Visitor-' + id.split('.')[0].slice(-4);
+    }
+    
+    // If it contains 'NaN', replace with a more friendly identifier
+    if (id.includes('NaN')) {
+      return 'Visitor-New';
+    }
+    
+    // For any other case, truncate if too long
+    return id.length > 12 ? `${id.slice(0, 12)}...` : id;
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/visitor');
+        const response = await fetch('/api/visitors', {
+          // Add cache control headers to prevent caching
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
+        });
         if (!response.ok) {
           throw new Error('Failed to fetch analytics data');
         }
 
         const data = await response.json();
-        setVisitors(data.visitors);
+        setVisitors(data.recentVisitors);
 
-        // Calculate statistics
-        const today = new Date().toDateString();
-        const activeToday = data.visitors.filter(
-          (v: VisitorData) => new Date(v.lastVisit).toDateString() === today
-        ).length;
-
-        const totalVisits = data.visitors.reduce((acc: number, v: VisitorData) => acc + v.visitCount, 0);
-        const averageVisits = totalVisits / data.visitors.length || 0;
-
-        const browsers: { [key: string]: number } = {};
-        const countries: { [key: string]: number } = {};
-
-        data.visitors.forEach((v: VisitorData) => {
-          browsers[v.browser] = (browsers[v.browser] || 0) + 1;
-          if (v.country) {
-            countries[v.country] = (countries[v.country] || 0) + 1;
-          }
-        });
-
+        // Update stats with the data from the API
         setStats({
-          totalVisitors: data.visitors.length,
-          activeToday,
-          averageVisits,
-          topBrowsers: browsers,
-          topCountries: countries
+          totalVisitors: data.totalVisitors,
+          activeToday: data.activeVisitors,
+          averageVisits: data.uniqueVisitors > 0 ? data.totalVisitors / data.uniqueVisitors : 0,
+          topBrowsers: data.topBrowsers.reduce((acc: { [key: string]: number }, item: any) => {
+            acc[item.browser] = item.count;
+            return acc;
+          }, {}),
+          topCountries: data.topCountries.reduce((acc: { [key: string]: number }, item: any) => {
+            acc[item.country] = item.count;
+            return acc;
+          }, {})
         });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load analytics data');
@@ -80,8 +97,15 @@ export default function AnalyticsPage() {
       }
     };
 
+    // Initial fetch
     fetchData();
-  }, []);
+
+    // Set up auto-refresh every 10 seconds
+    const intervalId = setInterval(fetchData, 10000);
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(intervalId);
+  }, []); // Empty dependency array since we want this to run once on mount
 
   if (loading) {
     return <div className="text-gray-500">Loading analytics...</div>;
@@ -174,16 +198,24 @@ export default function AnalyticsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {visitors.map((visitor) => (
-                  <tr key={visitor.visitorId}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">{visitor.visitorId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(visitor.firstVisit).toLocaleString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(visitor.lastVisit).toLocaleString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{visitor.visitCount}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{visitor.browser}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{visitor.country || 'Unknown'}</td>
-                  </tr>
-                ))}
+                {visitors.map((visitor) => {
+                  const firstVisitDate = new Date(visitor.firstVisit);
+                  const lastVisitDate = new Date(visitor.lastVisit);
+                  const formattedId = formatVisitorId(visitor.visitorId);
+                  
+                  return (
+                    <tr key={`visitor-${visitor.visitorId}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-500">
+                        <span title={visitor.visitorId}>{formattedId}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{firstVisitDate.toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{lastVisitDate.toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{visitor.visitCount}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{visitor.browser}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{visitor.country || 'Unknown'}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

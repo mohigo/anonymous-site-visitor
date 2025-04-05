@@ -1,30 +1,49 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
-import Visitor from '@/models/Visitor';
+import clientPromise from '@/lib/mongodb';
+
+const dbName = 'visitor-analytics';
 
 export async function POST(request: Request) {
   try {
-    await connectDB();
     const data = await request.json();
+    const client = await clientPromise;
+    const db = client.db(dbName);
+    const collection = db.collection('visitors');
 
     // Find existing visitor
-    let visitor = await Visitor.findOne({ visitorId: data.visitorId });
+    const visitor = await collection.findOne({ visitorId: data.visitorId });
 
     if (visitor) {
       // Update existing visitor
-      visitor.lastVisit = Date.now();
-      visitor.visitCount += 1;
-      await visitor.save();
+      await collection.updateOne(
+        { visitorId: data.visitorId },
+        {
+          $set: { 
+            lastVisit: new Date(),
+            browser: data.browser || 'Unknown',
+            country: data.country || 'Unknown',
+            screenResolution: data.screenResolution || '1920x1080',
+            preferences: data.preferences || { theme: 'light', language: 'en' }
+          },
+          $inc: { visitCount: 1 }
+        }
+      );
     } else {
       // Create new visitor
-      visitor = await Visitor.create({
+      const now = new Date();
+      await collection.insertOne({
         ...data,
-        lastVisit: Date.now(),
+        firstVisit: now,
+        lastVisit: now,
         visitCount: 1,
+        browser: data.browser || 'Unknown',
+        country: data.country || 'Unknown',
+        screenResolution: data.screenResolution || '1920x1080',
+        preferences: data.preferences || { theme: 'light', language: 'en' }
       });
     }
 
-    return NextResponse.json(visitor);
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error saving visitor data:', error);
     return NextResponse.json(
@@ -36,9 +55,29 @@ export async function POST(request: Request) {
 
 export async function GET() {
   try {
-    await connectDB();
+    const client = await clientPromise;
+    const db = client.db(dbName);
+    const collection = db.collection('visitors');
 
-    // Get analytics data
+    // Convert string dates to Date objects for existing records
+    await collection.updateMany(
+      { 
+        $or: [
+          { lastVisit: { $type: "string" } },
+          { firstVisit: { $type: "string" } }
+        ]
+      },
+      [
+        { 
+          $set: {
+            lastVisit: { $toDate: "$lastVisit" },
+            firstVisit: { $toDate: "$firstVisit" }
+          }
+        }
+      ]
+    );
+
+    // Get analytics data using MongoDB native operations
     const [
       totalVisitors,
       uniqueVisitors,
@@ -47,56 +86,69 @@ export async function GET() {
       topBrowsers,
     ] = await Promise.all([
       // Total visitors
-      Visitor.countDocuments(),
+      collection.countDocuments(),
       
       // Unique visitors
-      Visitor.distinct('visitorId').then(ids => ids.length),
+      collection.distinct('visitorId').then(ids => ids.length),
       
-      // Recent visitors
-      Visitor.find()
+      // Recent visitors - ensure proper date sorting
+      collection.find()
         .sort({ lastVisit: -1 })
-        .limit(5),
+        .limit(5)
+        .project({
+          visitorId: 1,
+          firstVisit: 1,
+          lastVisit: 1,
+          visitCount: 1,
+          browser: 1,
+          country: 1,
+          preferences: 1
+        })
+        .toArray(),
       
       // Top countries
-      Visitor.aggregate([
+      collection.aggregate([
         { $group: { _id: '$country', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 5 },
-        { $project: { country: '$_id', count: 1, _id: 0 } },
-      ]),
+        { $project: { country: '$_id', count: 1, _id: 0 } }
+      ]).toArray(),
       
       // Top browsers
-      Visitor.aggregate([
+      collection.aggregate([
         { $group: { _id: '$browser', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 5 },
-        { $project: { browser: '$_id', count: 1, _id: 0 } },
-      ]),
+        { $project: { browser: '$_id', count: 1, _id: 0 } }
+      ]).toArray(),
     ]);
 
     // Get hourly visitors for the last 24 hours
-    const hourlyVisitors = await Visitor.aggregate([
+    const hourlyVisitors = await collection.aggregate([
       {
         $match: {
-          lastVisit: { $gte: Date.now() - 24 * 60 * 60 * 1000 }
+          lastVisit: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
         }
       },
       {
         $group: {
-          _id: { $hour: { $toDate: '$lastVisit' } },
+          _id: { $hour: '$lastVisit' },
           count: { $sum: 1 }
         }
       },
       { $sort: { _id: 1 } },
       { $project: { hour: '$_id', count: 1, _id: 0 } }
-    ]);
+    ]).toArray();
+
+    // Get active visitors (last 5 minutes)
+    const activeVisitors = await collection.countDocuments({
+      lastVisit: { $gte: new Date(Date.now() - 5 * 60 * 1000) }
+    });
 
     return NextResponse.json({
       totalVisitors,
       uniqueVisitors,
-      activeVisitors: await Visitor.countDocuments({
-        lastVisit: { $gte: Date.now() - 5 * 60 * 1000 } // Active in last 5 minutes
-      }),
+      activeVisitors,
       recentVisitors,
       topCountries,
       topBrowsers,

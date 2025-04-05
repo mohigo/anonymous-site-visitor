@@ -212,8 +212,8 @@ export default function Dashboard() {
                       outerRadius={100}
                       label
                     >
-                      {browserData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      {browserData.map((entry) => (
+                        <Cell key={`browser-${entry.name}`} fill={COLORS[browserData.indexOf(entry) % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -240,8 +240,8 @@ export default function Dashboard() {
                       outerRadius={100}
                       label
                     >
-                      {countryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      {countryData.map((entry) => (
+                        <Cell key={`country-${entry.name}`} fill={COLORS[countryData.indexOf(entry) % COLORS.length]} />
                       ))}
                     </Pie>
                     <Tooltip />
@@ -294,14 +294,14 @@ export default function Dashboard() {
                   .filter(anomaly => anomaly.isAnomaly)
                   .slice(0, 5)
                   .map((anomaly, index) => (
-                    <div key={index} className="flex items-start p-4 bg-red-50 rounded-lg">
+                    <div key={`anomaly-${anomaly.score}-${index}`} className="flex items-start p-4 bg-red-50 rounded-lg">
                       <ExclamationTriangleIcon className="h-6 w-6 text-red-500 mr-3 mt-1" />
                       <div>
                         <h3 className="text-lg font-medium text-red-900">Suspicious Activity Detected</h3>
                         <p className="text-red-700 mt-1">Anomaly Score: {(anomaly.score * 100).toFixed(2)}%</p>
                         <ul className="mt-2 list-disc list-inside text-red-600">
-                          {anomaly.reasons.map((reason, i) => (
-                            <li key={i}>{reason}</li>
+                          {anomaly.reasons.map((reason) => (
+                            <li key={`reason-${reason}`}>{reason}</li>
                           ))}
                         </ul>
                       </div>
