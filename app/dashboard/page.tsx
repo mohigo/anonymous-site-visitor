@@ -117,10 +117,6 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-100">
       <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <Link href="/" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
-            ← Back to Home
-          </Link>
-          
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Analytics Dashboard</h1>
 
           {/* Key Metrics */}

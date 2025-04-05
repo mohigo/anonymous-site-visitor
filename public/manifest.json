@@ -1,16 +1,35 @@
 {
-  "name": "Visitor Identification",
-  "short_name": "Visitor ID",
-  "description": "Advanced visitor identification and tracking system",
+  "name": "Visitor Analytics Dashboard",
+  "short_name": "Analytics",
+  "description": "Privacy-focused visitor analytics that respects user preferences and data protection",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2563EB",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
     }
-  ]
+  ],
+  "permissions": [],
+  "privacy": {
+    "tracking": false,
+    "analytics": {
+      "purpose": "Site analytics and visitor count",
+      "data_retention": "30 days",
+      "cookies": false
+    }
+  }
 } 
