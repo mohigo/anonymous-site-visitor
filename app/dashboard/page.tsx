@@ -114,11 +114,21 @@ export default function Dashboard() {
   }));
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Analytics Dashboard</h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto">
+            <h1 className="text-4xl font-bold mb-2">Analytics Dashboard</h1>
+            <p className="text-xl opacity-90">
+              Monitor visitor activity and discover insights in real-time
+            </p>
+          </div>
+        </div>
+      </section>
 
+      <div className="container mx-auto py-8 sm:px-6 lg:px-8">
+        <div className="px-4 sm:px-0">
           {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             <div className="bg-white p-6 rounded-lg shadow">

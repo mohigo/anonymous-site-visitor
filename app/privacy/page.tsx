@@ -4,17 +4,21 @@ import { motion } from 'framer-motion';
 
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Privacy-First Analytics</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Learn how we balance powerful analytics with user privacy through advanced machine learning and ethical data practices.
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Hero Section */}
+      <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-16">
+        <div className="container mx-auto px-4">
+          <div className="max-w-3xl mx-auto text-center">
+            <h1 className="text-4xl font-bold mb-4">Privacy-First Analytics</h1>
+            <p className="text-xl opacity-90">
+              Learn how we balance powerful analytics with user privacy through advanced machine learning and ethical data practices.
+            </p>
+          </div>
         </div>
+      </section>
 
-        {/* Main Content */}
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto space-y-16">
           {/* Privacy Approach Section */}
           <section>
