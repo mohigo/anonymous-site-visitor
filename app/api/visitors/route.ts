@@ -136,14 +136,97 @@ export async function GET() {
           count: { $sum: 1 }
         }
       },
-      { $sort: { _id: 1 } },
-      { $project: { hour: '$_id', count: 1, _id: 0 } }
+      { $sort: { _id: 1 } }
     ]).toArray();
+
+    // Convert hourly data to array of counts
+    const hourlyData = new Array(24).fill(0);
+    hourlyVisitors.forEach(({ _id, count }) => {
+      hourlyData[_id] = count;
+    });
+
+    // Calculate peak hours (hours with visits > average)
+    const average = hourlyData.reduce((a, b) => a + b, 0) / 24;
+    const peakHours = hourlyData
+      .map((count, hour) => ({ hour, count }))
+      .filter(({ count }) => count > average)
+      .map(({ hour }) => hour);
 
     // Get active visitors (last 5 minutes)
     const activeVisitors = await collection.countDocuments({
       lastVisit: { $gte: new Date(Date.now() - 5 * 60 * 1000) }
     });
+
+    // Calculate returning visitor rate
+    const returningVisitors = await collection.countDocuments({
+      visitCount: { $gt: 1 }
+    });
+    const returningVisitorRate = returningVisitors / totalVisitors;
+
+    // Calculate average visit duration (using a 30-minute session timeout)
+    const sessionTimeout = 30 * 60 * 1000; // 30 minutes in milliseconds
+    const visitorSessions = await collection.aggregate([
+      {
+        $group: {
+          _id: '$visitorId',
+          visits: { $push: '$lastVisit' }
+        }
+      }
+    ]).toArray();
+
+    let totalDuration = 0;
+    let sessionCount = 0;
+
+    visitorSessions.forEach(({ visits }) => {
+      const sortedVisits = visits.sort((a: Date, b: Date) => a.getTime() - b.getTime());
+      for (let i = 1; i < sortedVisits.length; i++) {
+        const timeDiff = sortedVisits[i].getTime() - sortedVisits[i - 1].getTime();
+        if (timeDiff < sessionTimeout) {
+          totalDuration += timeDiff;
+          sessionCount++;
+        }
+      }
+    });
+
+    const averageVisitDuration = sessionCount > 0 ? totalDuration / sessionCount : 0;
+
+    // Detect anomalies
+    const anomalies = [];
+    
+    // Check for unusual spikes in traffic
+    const maxHourlyVisits = Math.max(...hourlyData);
+    if (maxHourlyVisits > average * 3) {
+      anomalies.push({
+        score: maxHourlyVisits / (average * 3),
+        isAnomaly: true,
+        reasons: ['Unusual spike in traffic detected']
+      });
+    }
+
+    // Check for unusual number of visits from same IP
+    const suspiciousVisitors = await collection.aggregate([
+      {
+        $group: {
+          _id: '$visitorId',
+          count: { $sum: 1 },
+          lastVisit: { $max: '$lastVisit' }
+        }
+      },
+      {
+        $match: {
+          count: { $gt: 100 }, // Threshold for suspicious activity
+          lastVisit: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } // Last 24 hours
+        }
+      }
+    ]).toArray();
+
+    if (suspiciousVisitors.length > 0) {
+      anomalies.push({
+        score: 0.8,
+        isAnomaly: true,
+        reasons: ['High frequency of visits from same visitor ID']
+      });
+    }
 
     return NextResponse.json({
       totalVisitors,
@@ -152,7 +235,13 @@ export async function GET() {
       recentVisitors,
       topCountries,
       topBrowsers,
-      hourlyVisitors,
+      hourlyVisitors: hourlyData,
+      patterns: {
+        peakHours,
+        returningVisitorRate,
+        averageVisitDuration,
+        anomalies
+      }
     });
   } catch (error) {
     console.error('Error fetching analytics:', error);

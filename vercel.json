@@ -1,0 +1,37 @@
+{
+  "github": {
+    "silent": true
+  },
+  "analytics": false,
+  "speedInsights": {
+    "enabled": false
+  },
+  "devCommand": "next dev",
+  "buildCommand": "next build",
+  "cleanUrls": true,
+  "framework": {
+    "config": {
+      "devIndicators": false,
+      "productionBrowserSourceMaps": false
+    }
+  },
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Vercel-Speed-Insights",
+          "value": "off"
+        },
+        {
+          "key": "X-Vercel-Analytics",
+          "value": "off"
+        }
+      ]
+    }
+  ]
+} 

@@ -2,6 +2,12 @@ import { Inter } from 'next/font/google';
 import VisitorTracker from '../components/VisitorTracker';
 import VisitorProfile from '../components/VisitorProfile';
 import Link from 'next/link';
+import { 
+  MagnifyingGlassIcon, 
+  ShieldCheckIcon, 
+  ChartBarSquareIcon,
+  BugAntIcon
+} from '@heroicons/react/24/outline';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -22,10 +28,10 @@ export default function Home() {
               Identify and track anonymous visitors with precision and privacy
             </p>
             <div className="flex gap-4 justify-center">
-              <Link href="/dashboard" className="bg-white text-blue-600 px-8 py-3 rounded-full font-semibold hover:bg-blue-50 transition-colors">
+              <Link href="/analytics" className="bg-white text-blue-600 px-8 py-3 rounded-full font-semibold hover:bg-blue-50 transition-colors inline-flex items-center justify-center">
                 View Analytics
               </Link>
-              <button className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition-colors">
+              <button className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition-colors inline-flex items-center justify-center">
                 Get Started
               </button>
             </div>
@@ -37,26 +43,41 @@ export default function Home() {
       <section className="py-20 bg-white">
         <div className="container mx-auto px-6">
           <h2 className="text-3xl font-bold text-center mb-12">Key Features</h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="bg-gray-50 p-6 rounded-lg shadow-lg">
-              <div className="text-blue-600 text-2xl mb-4">🔍</div>
-              <h3 className="text-xl font-semibold mb-3">Accurate Identification</h3>
-              <p className="text-gray-600">
+              <div className="flex justify-center mb-4">
+                <MagnifyingGlassIcon className="h-12 w-12 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-center">Accurate Identification</h3>
+              <p className="text-gray-600 text-center">
                 Advanced fingerprinting technology to identify unique visitors with high accuracy
               </p>
             </div>
             <div className="bg-gray-50 p-6 rounded-lg shadow-lg">
-              <div className="text-blue-600 text-2xl mb-4">🛡️</div>
-              <h3 className="text-xl font-semibold mb-3">Privacy-First</h3>
-              <p className="text-gray-600">
+              <div className="flex justify-center mb-4">
+                <ShieldCheckIcon className="h-12 w-12 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-center">Privacy-First</h3>
+              <p className="text-gray-600 text-center">
                 Respect user privacy while maintaining effective visitor tracking
               </p>
             </div>
             <div className="bg-gray-50 p-6 rounded-lg shadow-lg">
-              <div className="text-blue-600 text-2xl mb-4">📊</div>
-              <h3 className="text-xl font-semibold mb-3">Real-time Analytics</h3>
-              <p className="text-gray-600">
+              <div className="flex justify-center mb-4">
+                <ChartBarSquareIcon className="h-12 w-12 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-center">Real-time Analytics</h3>
+              <p className="text-gray-600 text-center">
                 Get instant insights into visitor behavior and patterns
+              </p>
+            </div>
+            <div className="bg-gray-50 p-6 rounded-lg shadow-lg">
+              <div className="flex justify-center mb-4">
+                <BugAntIcon className="h-12 w-12 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-semibold mb-3 text-center">Bot Detection</h3>
+              <p className="text-gray-600 text-center">
+                Automatically identify and monitor suspicious bot activities in real-time
               </p>
             </div>
           </div>
