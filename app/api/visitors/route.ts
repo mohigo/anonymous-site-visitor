@@ -79,18 +79,11 @@ export async function GET() {
 
     // Get analytics data using MongoDB native operations
     const [
-      totalVisitors,
-      uniqueVisitors,
       recentVisitors,
       topCountries,
       topBrowsers,
+      totalVisitsAgg
     ] = await Promise.all([
-      // Total visitors
-      collection.countDocuments(),
-      
-      // Unique visitors
-      collection.distinct('visitorId').then(ids => ids.length),
-      
       // Recent visitors - ensure proper date sorting
       collection.find()
         .sort({ lastVisit: -1 })
@@ -110,7 +103,7 @@ export async function GET() {
       collection.aggregate([
         { $group: { _id: '$country', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
-        { $limit: 5 },
+        { $limit: 10 },
         { $project: { country: '$_id', count: 1, _id: 0 } }
       ]).toArray(),
       
@@ -118,10 +111,22 @@ export async function GET() {
       collection.aggregate([
         { $group: { _id: '$browser', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
-        { $limit: 5 },
+        { $limit: 10 },
         { $project: { browser: '$_id', count: 1, _id: 0 } }
       ]).toArray(),
+
+      // Total visits
+      collection.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalVisits: { $sum: "$visitCount" }
+          }
+        }
+      ]).toArray()
     ]);
+
+    const uniqueVisitors = await collection.distinct('visitorId');
 
     // Get hourly visitors for the last 24 hours
     const hourlyVisitors = await collection.aggregate([
@@ -161,7 +166,8 @@ export async function GET() {
     const returningVisitors = await collection.countDocuments({
       visitCount: { $gt: 1 }
     });
-    const returningVisitorRate = returningVisitors / totalVisitors;
+    const totalVisits = totalVisitsAgg[0]?.totalVisits || 0;
+    const returningVisitorRate = returningVisitors / totalVisits || 0;
 
     // Calculate average visit duration (using a 30-minute session timeout)
     const sessionTimeout = 30 * 60 * 1000; // 30 minutes in milliseconds
@@ -169,26 +175,58 @@ export async function GET() {
       {
         $group: {
           _id: '$visitorId',
-          visits: { $push: '$lastVisit' }
+          visits: {
+            $push: {
+              lastVisit: '$lastVisit',
+              visitCount: '$visitCount'
+            }
+          }
         }
       }
     ]).toArray();
 
     let totalDuration = 0;
-    let sessionCount = 0;
+    let totalSessions = 0;
+
+    interface Visit {
+      lastVisit: Date;
+      visitCount: number;
+    }
 
     visitorSessions.forEach(({ visits }) => {
-      const sortedVisits = visits.sort((a: Date, b: Date) => a.getTime() - b.getTime());
-      for (let i = 1; i < sortedVisits.length; i++) {
-        const timeDiff = sortedVisits[i].getTime() - sortedVisits[i - 1].getTime();
-        if (timeDiff < sessionTimeout) {
-          totalDuration += timeDiff;
-          sessionCount++;
+      // Sort visits by timestamp
+      const sortedVisits = visits.sort((a: Visit, b: Visit) => 
+        new Date(a.lastVisit).getTime() - new Date(b.lastVisit).getTime()
+      );
+
+      // For each visitor, estimate session duration based on visit patterns
+      let currentSessionStart: number | null = null;
+      sortedVisits.forEach((visit: Visit, index: number) => {
+        const visitTime = new Date(visit.lastVisit).getTime();
+        
+        if (!currentSessionStart) {
+          currentSessionStart = visitTime;
+        } else {
+          const timeSinceLastVisit = visitTime - currentSessionStart;
+          
+          // If time between visits exceeds session timeout, consider it a new session
+          if (timeSinceLastVisit > sessionTimeout) {
+            // Add previous session duration (with minimum 5 minutes per session)
+            totalDuration += Math.max(5 * 60 * 1000, sessionTimeout);
+            totalSessions++;
+            currentSessionStart = visitTime;
+          }
         }
-      }
+        
+        // Handle last visit in the sequence
+        if (index === sortedVisits.length - 1 && currentSessionStart) {
+          totalDuration += Math.max(5 * 60 * 1000, sessionTimeout);
+          totalSessions++;
+        }
+      });
     });
 
-    const averageVisitDuration = sessionCount > 0 ? totalDuration / sessionCount : 0;
+    const averageVisitDuration = totalSessions > 0 ? totalDuration / totalSessions : 0;
 
     // Detect anomalies
     const anomalies = [];
@@ -228,14 +266,15 @@ export async function GET() {
       });
     }
 
+    // Return analytics data
     return NextResponse.json({
-      totalVisitors,
-      uniqueVisitors,
-      activeVisitors,
       recentVisitors,
-      topCountries,
-      topBrowsers,
+      totalVisits,
+      uniqueVisitors: uniqueVisitors.length,
+      activeVisitors,
       hourlyVisitors: hourlyData,
+      topBrowsers,
+      topCountries,
       patterns: {
         peakHours,
         returningVisitorRate,

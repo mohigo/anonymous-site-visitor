@@ -21,7 +21,8 @@ import {
   ComputerDesktopIcon,
   ArrowTrendingUpIcon,
   ArrowPathIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline';
 import { ClockIcon } from '@heroicons/react/24/solid';
 
@@ -40,7 +41,7 @@ interface VisitorData {
 
 interface AnalyticsData {
   recentVisitors: VisitorData[];
-  totalVisitors: number;
+  totalVisits: number;
   uniqueVisitors: number;
   activeVisitors: number;
   hourlyVisitors: number[];
@@ -150,11 +151,11 @@ export default function AnalyticsPage() {
           <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
             <div className="flex items-center">
               <div className="p-3 bg-blue-50 rounded-xl">
-                <UserGroupIcon className="h-8 w-8 text-blue-600" />
+                <UsersIcon className="h-8 w-8 text-blue-600" />
               </div>
               <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Visitors</h3>
-                <p className="text-2xl font-semibold text-gray-900 mt-1">{data.totalVisitors}</p>
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Visits</h3>
+                <p className="text-2xl font-semibold text-gray-900 mt-1">{data.totalVisits}</p>
               </div>
             </div>
           </div>
@@ -177,7 +178,10 @@ export default function AnalyticsPage() {
               <div className="ml-4">
                 <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Avg Visits/User</h3>
                 <p className="text-2xl font-semibold text-gray-900 mt-1">
-                  {(data.totalVisitors / data.uniqueVisitors || 0).toFixed(1)}
+                  {data.totalVisits && data.uniqueVisitors ? 
+                    Number(data.totalVisits / data.uniqueVisitors).toFixed(1) : 
+                    '0.0'
+                  }
                 </p>
               </div>
             </div>
