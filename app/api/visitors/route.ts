@@ -157,9 +157,11 @@ export async function GET() {
       .filter(({ count }) => count > average)
       .map(({ hour }) => hour);
 
-    // Get active visitors (last 5 minutes)
+    // Get active visitors today (since midnight)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const activeVisitors = await collection.countDocuments({
-      lastVisit: { $gte: new Date(Date.now() - 5 * 60 * 1000) }
+      lastVisit: { $gte: today }
     });
 
     // Calculate returning visitor rate

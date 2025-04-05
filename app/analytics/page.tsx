@@ -165,7 +165,7 @@ export default function AnalyticsPage() {
                 <ChartBarIcon className="h-8 w-8 text-green-600" />
               </div>
               <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Active Today</h3>
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Visitors Today</h3>
                 <p className="text-2xl font-semibold text-gray-900 mt-1">{data.activeVisitors}</p>
               </div>
             </div>
