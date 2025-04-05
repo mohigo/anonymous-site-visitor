@@ -120,7 +120,7 @@ export default function AnalyticsPage() {
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-12">
         <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl font-bold mb-2">Visitor Analytics</h1>
             <p className="text-xl opacity-90">
               Real-time insights into your visitor patterns and behaviors
