@@ -127,6 +127,7 @@ export async function GET() {
     ]);
 
     const uniqueVisitors = await collection.distinct('visitorId');
+    const totalVisits = totalVisitsAgg[0]?.totalVisits || 0;
 
     // Get hourly visitors for the last 24 hours
     const hourlyVisitors = await collection.aggregate([
@@ -168,8 +169,7 @@ export async function GET() {
     const returningVisitors = await collection.countDocuments({
       visitCount: { $gt: 1 }
     });
-    const totalVisits = totalVisitsAgg[0]?.totalVisits || 0;
-    const returningVisitorRate = returningVisitors / totalVisits || 0;
+    const returningVisitorRate = returningVisitors / uniqueVisitors.length || 0;
 
     // Calculate average visit duration (using a 30-minute session timeout)
     const sessionTimeout = 30 * 60 * 1000; // 30 minutes in milliseconds

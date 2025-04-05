@@ -154,8 +154,8 @@ export default function AnalyticsPage() {
                 <UsersIcon className="h-8 w-8 text-blue-600" />
               </div>
               <div className="ml-4">
-                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Visits</h3>
-                <p className="text-2xl font-semibold text-gray-900 mt-1">{data.totalVisits}</p>
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Visitors</h3>
+                <p className="text-2xl font-semibold text-gray-900 mt-1">{data.uniqueVisitors}</p>
               </div>
             </div>
           </div>
