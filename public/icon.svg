@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="32" height="32" rx="8" fill="#2563EB"/>
+  
+  <!-- Shield Outline -->
+  <path d="M8 9C8 9 16 7 24 9V16C24 21 16 25 16 25C16 25 8 21 8 16V9Z" 
+        stroke="white" 
+        stroke-width="1.5" 
+        fill="none" 
+        opacity="0.6">
+    <animate attributeName="opacity" 
+             values="0.6;0.8;0.6" 
+             dur="4s" 
+             repeatCount="indefinite"/>
+  </path>
+  
+  <!-- Encrypted Data Blocks -->
+  <rect x="11" y="10" width="3" height="3" fill="white" opacity="0.9"/>
+  <rect x="18" y="10" width="3" height="3" fill="white" opacity="0.2"/>
+  <rect x="14.5" y="13.5" width="3" height="3" fill="white" opacity="0.6"/>
+  <rect x="11" y="17" width="3" height="3" fill="white" opacity="0.2"/>
+  <rect x="18" y="17" width="3" height="3" fill="white" opacity="0.9"/>
+  
+  <!-- Encryption Animation -->
+  <rect x="18" y="10" width="3" height="3" fill="white" opacity="0.2">
+    <animate attributeName="opacity" values="0.2;0.9;0.2" dur="3s" repeatCount="indefinite"/>
+  </rect>
+  <rect x="11" y="17" width="3" height="3" fill="white" opacity="0.2">
+    <animate attributeName="opacity" values="0.2;0.9;0.2" dur="3s" repeatCount="indefinite" begin="1.5s"/>
+  </rect>
+</svg> 
