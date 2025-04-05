@@ -25,6 +25,13 @@ export default function VisitorTracker() {
   useEffect(() => {
     const trackVisitor = async () => {
       try {
+        // Check if we've already tracked this visit in the current session
+        const lastTracked = sessionStorage.getItem('lastTracked');
+        const now = Date.now();
+        if (lastTracked && (now - parseInt(lastTracked)) < 30 * 60 * 1000) { // 30 minutes session
+          return; // Skip if tracked recently
+        }
+        
         // Initialize ML fingerprinting
         const mlFingerprint = new MLFingerprint();
         await mlFingerprint.initialize();
@@ -55,7 +62,6 @@ export default function VisitorTracker() {
           visitorData = {
             ...visitorData,
             lastVisit: new Date().toISOString(),
-            visitCount: (visitorData.visitCount || 0) + 1,
             browser: detectBrowser(),
             screenResolution: `${window.screen.width}x${window.screen.height}`,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -81,6 +87,9 @@ export default function VisitorTracker() {
         if (!response.ok) {
           throw new Error('Failed to update visitor data');
         }
+
+        // Update last tracked time
+        sessionStorage.setItem('lastTracked', now.toString());
       } catch (error) {
         console.error('Error tracking visitor:', error);
       }

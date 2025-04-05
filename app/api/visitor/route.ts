@@ -18,6 +18,11 @@ export async function POST(request: Request) {
     const existingVisitor = await collection.findOne({ visitorId: visitor.visitorId });
 
     if (existingVisitor) {
+      // Check if enough time has passed since last visit (30 minutes)
+      const lastVisitTime = new Date(existingVisitor.lastVisit).getTime();
+      const currentTime = new Date(now).getTime();
+      const shouldIncrementCount = !lastVisitTime || (currentTime - lastVisitTime) >= 30 * 60 * 1000;
+
       // Update existing visitor
       await collection.updateOne(
         { visitorId: visitor.visitorId },
@@ -30,7 +35,7 @@ export async function POST(request: Request) {
             preferences: visitor.preferences || { theme: 'light', language: 'en' },
             timestamp: Date.now()
           },
-          $inc: { visitCount: 1 }
+          ...(shouldIncrementCount ? { $inc: { visitCount: 1 } } : {})
         }
       );
     } else {
@@ -60,13 +65,32 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const visitorId = searchParams.get('id');
+
+    if (!visitorId) {
+      return NextResponse.json(
+        { error: 'Visitor ID is required' },
+        { status: 400 }
+      );
+    }
+
     const client = await clientPromise;
     const db = client.db(dbName);
     const collection = db.collection('visitors');
 
-    // Get visitors and ensure all required fields are present
-    const visitors = await collection.find({}).toArray();
-    const processedVisitors = visitors.map(visitor => ({
+    // Get specific visitor by ID
+    const visitor = await collection.findOne({ visitorId });
+
+    if (!visitor) {
+      return NextResponse.json(
+        { error: 'Visitor not found' },
+        { status: 404 }
+      );
+    }
+
+    // Process visitor data to match VisitorData type
+    const processedVisitor: VisitorData = {
       visitorId: visitor.visitorId,
       firstVisit: visitor.firstVisit || visitor.lastVisit || new Date().toISOString(),
       lastVisit: visitor.lastVisit || new Date().toISOString(),
@@ -76,54 +100,21 @@ export async function GET(request: Request) {
       screenResolution: visitor.screenResolution || '1920x1080',
       preferences: visitor.preferences || { theme: 'light', language: 'en' },
       timestamp: visitor.timestamp || Date.now()
-    }));
-    
+    };
+
     // Get ML-based pattern analysis
-    const patterns = await analyzeVisitorPatterns(processedVisitors[0]); // Pass the most recent visitor
-    
-    // Calculate basic stats
-    const totalVisitors = processedVisitors.length;
-    const uniqueVisitors = new Set(processedVisitors.map(v => v.visitorId)).size;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const activeToday = processedVisitors.filter(v => new Date(v.lastVisit) >= today).length;
-    
-    // Calculate hourly distribution
-    const hourlyVisitors = new Array(24).fill(0);
-    processedVisitors.forEach(visitor => {
-      const hour = new Date(visitor.lastVisit).getHours();
-      hourlyVisitors[hour]++;
-    });
-    
-    // Calculate browser distribution
-    const browserDistribution = processedVisitors.reduce((acc: { [key: string]: number }, visitor) => {
-      acc[visitor.browser] = (acc[visitor.browser] || 0) + 1;
-      return acc;
-    }, {});
-    
-    // Calculate country distribution
-    const countryDistribution = processedVisitors.reduce((acc: { [key: string]: number }, visitor) => {
-      acc[visitor.country] = (acc[visitor.country] || 0) + 1;
-      return acc;
-    }, {});
+    const patterns = await analyzeVisitorPatterns(processedVisitor);
 
     return NextResponse.json({
-      visitors: processedVisitors,
-      stats: {
-        totalVisitors,
-        uniqueVisitors,
-        activeToday,
-        averageVisitsPerUser: totalVisitors / uniqueVisitors
-      },
-      hourlyVisitors,
-      browserDistribution,
-      countryDistribution,
-      patterns
+      visitor: {
+        ...processedVisitor,
+        patterns
+      }
     });
   } catch (error) {
-    console.error('Error fetching visitors:', error);
+    console.error('Error fetching visitor:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch visitors', visitors: [] },
+      { error: 'Failed to fetch visitor data' },
       { status: 500 }
     );
   }

@@ -10,42 +10,27 @@ export default function VisitorProfile() {
 
   const fetchVisitorData = async () => {
     try {
-      // First try to get current visitor data from localStorage
+      // Get current visitor ID from localStorage
       const storedData = localStorage.getItem('visitorData');
-      let currentVisitor = storedData ? JSON.parse(storedData) : null;
+      const currentVisitor = storedData ? JSON.parse(storedData) : null;
+      const visitorId = currentVisitor?.visitorId;
 
-      // If no stored data, fetch from API
-      if (!currentVisitor) {
-        const response = await fetch('/api/visitor');
-        if (!response.ok) {
-          throw new Error('Failed to fetch visitor data');
-        }
-        const data = await response.json();
-        if (data.visitors && data.visitors.length > 0) {
-          currentVisitor = data.visitors[0];
-          // Ensure preferences exist
-          currentVisitor.preferences = currentVisitor.preferences || {
-            theme: 'light',
-            language: navigator.language || 'en'
-          };
-          // Store the data for future use
-          localStorage.setItem('visitorData', JSON.stringify(currentVisitor));
-        }
+      if (!visitorId) {
+        throw new Error('No visitor ID available');
       }
 
-      if (!currentVisitor) {
+      // Always fetch fresh data from server
+      const response = await fetch(`/api/visitor?id=${visitorId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch visitor data');
+      }
+      const data = await response.json();
+      
+      if (!data.visitor) {
         throw new Error('No visitor data available');
       }
 
-      // Ensure preferences exist before setting state
-      if (!currentVisitor.preferences) {
-        currentVisitor.preferences = {
-          theme: 'light',
-          language: navigator.language || 'en'
-        };
-      }
-
-      setVisitorData(currentVisitor);
+      setVisitorData(data.visitor);
     } catch (err) {
       console.error('Error fetching visitor data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load visitor data');
@@ -150,7 +135,7 @@ export default function VisitorProfile() {
         </div>
       </div>
 
-      {visitorData?.patterns?.behaviorPatterns?.length > 0 && (
+      {visitorData?.patterns?.behaviorPatterns && visitorData.patterns.behaviorPatterns.length > 0 && (
         <div className="mt-8 pt-6 border-t border-gray-200">
           <h3 className="text-xl font-bold mb-4 text-gray-800">ML Insights</h3>
           

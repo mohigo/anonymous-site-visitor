@@ -24,8 +24,7 @@ export async function POST(request: Request) {
             country: data.country || 'Unknown',
             screenResolution: data.screenResolution || '1920x1080',
             preferences: data.preferences || { theme: 'light', language: 'en' }
-          },
-          $inc: { visitCount: 1 }
+          }
         }
       );
     } else {
@@ -85,19 +84,25 @@ export async function GET() {
       totalVisitsAgg
     ] = await Promise.all([
       // Recent visitors - ensure proper date sorting
-      collection.find()
-        .sort({ lastVisit: -1 })
-        .limit(5)
-        .project({
-          visitorId: 1,
-          firstVisit: 1,
-          lastVisit: 1,
-          visitCount: 1,
-          browser: 1,
-          country: 1,
-          preferences: 1
-        })
-        .toArray(),
+      collection.aggregate([
+        {
+          $sort: { lastVisit: -1 }
+        },
+        {
+          $limit: 5
+        },
+        {
+          $project: {
+            visitorId: 1,
+            firstVisit: 1,
+            lastVisit: 1,
+            visitCount: 1,
+            browser: 1,
+            country: 1,
+            preferences: 1
+          }
+        }
+      ]).toArray(),
       
       // Top countries
       collection.aggregate([
@@ -115,7 +120,7 @@ export async function GET() {
         { $project: { browser: '$_id', count: 1, _id: 0 } }
       ]).toArray(),
 
-      // Total visits
+      // Total visits - use the same visitCount field
       collection.aggregate([
         {
           $group: {
