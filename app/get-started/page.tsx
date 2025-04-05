@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { CheckIcon, ClipboardIcon } from '@heroicons/react/24/outline';
 
 const tiers = [
@@ -60,6 +61,30 @@ const tiers = [
 ];
 
 export default function GetStartedPage() {
+  const [copied, setCopied] = useState(false);
+
+  const codeSnippet = `<script src="https://cdn.fusionleap.dev/tracker.js"></script>
+
+<script>
+  FusionLeap.init({
+    siteId: 'YOUR_SITE_ID',
+    options: {
+      privacy: true,
+      analytics: true
+    }
+  });
+</script>`;
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(codeSnippet);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-600 to-blue-800">
       <div className="relative isolate px-6 pt-20 lg:px-8">
@@ -170,36 +195,24 @@ export default function GetStartedPage() {
               <div className="flex items-center justify-between px-6 py-3 bg-[#1E3A9F]">
                 <div className="text-base font-medium text-white">HTML</div>
                 <button 
-                  className="text-base text-white/90 hover:text-white transition-colors flex items-center gap-2" 
-                  onClick={() => navigator.clipboard.writeText(`<script src="https://cdn.fusionleap.dev/tracker.js"></script>
-
-<script>
-  FusionLeap.init({
-    siteId: 'YOUR_SITE_ID',
-    options: {
-      privacy: true,
-      analytics: true
-    }
-  });
-</script>`)}
+                  className="text-base text-white/90 hover:text-white transition-colors flex items-center gap-2 px-3 py-1 rounded-lg hover:bg-blue-600/30" 
+                  onClick={handleCopy}
                 >
-                  <ClipboardIcon className="h-5 w-5" />
-                  Copy code
+                  {copied ? (
+                    <>
+                      <CheckIcon className="h-5 w-5" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <ClipboardIcon className="h-5 w-5" />
+                      Copy code
+                    </>
+                  )}
                 </button>
               </div>
               <div className="p-8 text-[15px] leading-7 text-white font-mono">
-                <pre className="text-left whitespace-pre"><code>{`<!-- Add to your HTML -->
-<script src="https://cdn.fusionleap.dev/tracker.js"></script>
-
-<script>
-  FusionLeap.init({
-    siteId: 'YOUR_SITE_ID',
-    options: {
-      privacy: true,
-      analytics: true
-    }
-  });
-</script>`}</code></pre>
+                <pre className="text-left whitespace-pre"><code>{codeSnippet}</code></pre>
               </div>
             </div>
             <p className="mt-6 text-sm text-white/80">
