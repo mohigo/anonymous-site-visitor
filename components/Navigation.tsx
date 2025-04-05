@@ -40,6 +40,12 @@ export default function Navigation() {
             >
               Analytics
             </Link>
+            <Link 
+              href="/privacy" 
+              className="text-gray-600 hover:text-blue-600 transition-colors"
+            >
+              Privacy
+            </Link>
           </div>
         </div>
       </div>
