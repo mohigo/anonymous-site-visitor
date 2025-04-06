@@ -5,12 +5,7 @@
   "devCommand": "next dev",
   "buildCommand": "next build",
   "cleanUrls": true,
-  "framework": {
-    "config": {
-      "devIndicators": false,
-      "productionBrowserSourceMaps": false
-    }
-  },
+  "framework": "nextjs",
   "headers": [
     {
       "source": "/(.*)",
