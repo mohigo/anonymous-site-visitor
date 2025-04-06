@@ -349,6 +349,15 @@ export default function Home() {
           </motion.div>
         </motion.div>
       </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-50 py-8">
+        <div className="container mx-auto px-6">
+          <div className="text-center text-gray-600 text-sm">
+            <p>&copy; {new Date().getFullYear()} Fusion Leap Digital. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </main>
   );
 }
