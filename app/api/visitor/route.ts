@@ -33,46 +33,74 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
+    console.log('Received POST request to /api/visitor');
+    
     const body = await req.json();
-    const { visitorId, shouldIncrementVisit } = body;
+    console.log('Request body:', body);
+    
+    const { visitorId, shouldIncrementVisit, isReturningVisitor } = body;
 
     if (!visitorId) {
+      console.error('Missing visitorId in request');
       return NextResponse.json({ error: 'Visitor ID is required' }, { status: 400 });
     }
 
-    const client = await clientPromise;
+    let client;
+    try {
+      client = await clientPromise;
+      console.log('MongoDB connection established');
+    } catch (dbError) {
+      console.error('Failed to connect to MongoDB:', dbError);
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+    }
+
     const db = client.db('visitor-analytics');
     const collection = db.collection('visitors');
 
     // Get geolocation data
     console.log('Getting geolocation data...');
-    const geoData = await detectCountry(req);
-    console.log('Geolocation data:', geoData);
+    let geoData;
+    try {
+      geoData = await detectCountry(req);
+      console.log('Geolocation data:', geoData);
+    } catch (geoError) {
+      console.error('Geolocation detection failed:', geoError);
+      geoData = { country: 'Unknown', countryCode: 'XX' };
+    }
 
     // First, try to find the existing visitor
     console.log('Looking for existing visitor:', visitorId);
-    const existingVisitor = await collection.findOne({ visitorId });
-    console.log('Existing visitor:', existingVisitor);
+    let existingVisitor;
+    try {
+      existingVisitor = await collection.findOne({ visitorId });
+      console.log('Existing visitor:', existingVisitor);
+    } catch (findError) {
+      console.error('Error finding visitor:', findError);
+      return NextResponse.json({ error: 'Failed to check existing visitor' }, { status: 500 });
+    }
 
-    // Prepare the update operation based on whether the visitor exists
+    const now = new Date();
+
+    // Prepare the update operation based on visitor status
     const updateOperation = !existingVisitor ? {
       // New visitor: set all fields including initial visit count
       $set: {
         visitorId,
-        firstVisit: new Date(),
-        lastVisit: new Date(),
+        firstVisit: now,
+        lastVisit: now,
         visitCount: 1,
         browser: body.browser || 'Unknown',
         country: geoData.country,
         countryCode: geoData.countryCode,
         screenResolution: body.screenResolution || '1920x1080',
         preferences: body.preferences || { theme: 'light', language: 'en' },
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        clearHistory: isReturningVisitor ? 1 : 0 // Track number of times history was cleared
       }
     } : {
       // Existing visitor: update fields and optionally increment visit count
       $set: {
-        lastVisit: new Date(),
+        lastVisit: now,
         browser: body.browser || existingVisitor.browser,
         country: geoData.country,
         countryCode: geoData.countryCode,
@@ -81,42 +109,48 @@ export async function POST(req: NextRequest) {
         timestamp: Date.now()
       },
       ...(shouldIncrementVisit ? {
-        $inc: { visitCount: 1 }
+        $inc: { 
+          visitCount: 1,
+          ...(isReturningVisitor ? { clearHistory: 1 } : {}) // Increment clearHistory if returning after clearing
+        }
       } : {})
     };
 
-    console.log('Update operation:', JSON.stringify(updateOperation, null, 2));
+    console.log('Update operation:', updateOperation);
 
-    // Update or insert the visitor
-    const result = await collection.findOneAndUpdate(
-      { visitorId },
-      updateOperation,
-      {
-        upsert: true,
-        returnDocument: 'after'
+    // Update or insert the visitor document
+    let result;
+    try {
+      result = await collection.updateOne(
+        { visitorId },
+        updateOperation,
+        { upsert: true }
+      );
+      console.log('Update result:', result);
+    } catch (updateError) {
+      console.error('Error updating visitor:', updateError);
+      return NextResponse.json({ error: 'Failed to update visitor data' }, { status: 500 });
+    }
+
+    // Get the updated visitor data
+    let updatedVisitor;
+    try {
+      updatedVisitor = await collection.findOne({ visitorId });
+      if (!updatedVisitor) {
+        throw new Error('Failed to retrieve updated visitor data');
       }
-    );
-
-    console.log('MongoDB result:', result);
-
-    if (!result) {
-      console.error('Failed to update visitor - no result');
-      return NextResponse.json({ error: 'Failed to update visitor' }, { status: 500 });
+      console.log('Updated visitor data:', updatedVisitor);
+    } catch (fetchError) {
+      console.error('Error fetching updated visitor:', fetchError);
+      return NextResponse.json({ error: 'Failed to fetch updated visitor data' }, { status: 500 });
     }
 
-    // Return the updated document
-    return NextResponse.json(result);
+    return NextResponse.json(updatedVisitor);
   } catch (error) {
-    console.error('Error updating visitor:', error);
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack
-      });
-    }
+    console.error('Unhandled error in visitor API:', error);
     return NextResponse.json({ 
       error: 'Internal server error',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

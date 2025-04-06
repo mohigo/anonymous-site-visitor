@@ -11,17 +11,45 @@ export default function VisitorTracker() {
   useEffect(() => {
     const trackVisit = async () => {
       try {
+        console.log('Starting visitor tracking...');
+        
         // Generate visitor fingerprint
         const fingerprint = await generateVisitorFingerprint();
+        console.log('Generated fingerprint:', fingerprint);
         
         // Extract just the visitorId from the fingerprint data
         const visitorIdString = typeof fingerprint === 'string' ? fingerprint : fingerprint.visitorId;
+        console.log('Extracted visitorId:', visitorIdString);
+        
+        // Try to find existing visitor data in localStorage
+        const storedData = localStorage.getItem('visitorData');
+        console.log('Stored visitor data:', storedData);
+        const storedVisitor = storedData ? JSON.parse(storedData) : null;
+        
+        // Check if this is a returning visitor who cleared their history
+        let isReturningVisitor = false;
+        if (!storedVisitor) {
+          try {
+            console.log('Checking for returning visitor...');
+            // If no stored data, check server for matching fingerprint
+            const checkResponse = await fetch(`/api/visitor/check-fingerprint?fingerprint=${visitorIdString}`);
+            if (!checkResponse.ok) {
+              const errorData = await checkResponse.json();
+              throw new Error(`Fingerprint check failed: ${errorData.error || 'Unknown error'}`);
+            }
+            const checkResult = await checkResponse.json();
+            isReturningVisitor = checkResult.exists;
+            console.log('Returning visitor check result:', checkResult);
+          } catch (checkError) {
+            console.error('Error checking returning visitor:', checkError);
+            // Continue execution even if fingerprint check fails
+          }
+        }
+
         setVisitorId(visitorIdString);
 
-        // Get screen resolution
+        // Get screen resolution and browser info
         const screenResolution = `${window.screen?.width || 1920}x${window.screen?.height || 1080}`;
-
-        // Get browser info
         const userAgent = window.navigator.userAgent;
         const browser = 
           /Chrome/.test(userAgent) && !/Chromium|Edge/.test(userAgent) ? 'Chrome' :
@@ -30,13 +58,32 @@ export default function VisitorTracker() {
           /Edge/.test(userAgent) ? 'Edge' :
           /Opera|OPR/.test(userAgent) ? 'Opera' : 'Unknown';
 
-        // Check if we should increment visit count (30 minutes cooldown)
+        console.log('Browser info:', { browser, userAgent, screenResolution });
+
+        // Always increment visit count if:
+        // 1. No stored data (new visitor or cleared history)
+        // 2. 30 minutes have passed since last visit
         const lastVisitTime = localStorage.getItem('lastVisitTime');
         const currentTime = Date.now();
-        const shouldIncrementVisit = !lastVisitTime || (currentTime - parseInt(lastVisitTime)) >= 30 * 60 * 1000;
+        const shouldIncrementVisit = !storedData || 
+          (currentTime - parseInt(lastVisitTime || '0')) >= 30 * 60 * 1000;
 
         // Save current visit time
         localStorage.setItem('lastVisitTime', currentTime.toString());
+
+        const requestBody = {
+          visitorId: visitorIdString,
+          browser,
+          screenResolution,
+          preferences: {
+            theme: localStorage.getItem('theme') || 'light',
+            language: navigator.language || 'en'
+          },
+          shouldIncrementVisit,
+          isReturningVisitor
+        };
+
+        console.log('Sending visitor data to API:', requestBody);
 
         // Send visitor data to API
         const response = await fetch('/api/visitor', {
@@ -44,35 +91,45 @@ export default function VisitorTracker() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            visitorId: visitorIdString,
-            browser,
-            screenResolution,
-            preferences: {
-              theme: localStorage.getItem('theme') || 'light',
-              language: navigator.language || 'en'
-            },
-            shouldIncrementVisit
-          })
+          body: JSON.stringify(requestBody)
         });
 
-        const data = await response.json();
-
         if (!response.ok) {
-          throw new Error(data.error || data.details || 'Failed to update visitor data');
+          const errorData = await response.json();
+          throw new Error(`API request failed: ${errorData.error || 'Unknown error'} (${response.status})`);
         }
 
+        const data = await response.json();
+        console.log('API response:', data);
+
         // Store visitor data in localStorage for profile access
-        localStorage.setItem('visitorData', JSON.stringify({
+        const visitorData = {
           visitorId: visitorIdString,
           ...data
-        }));
+        };
+        localStorage.setItem('visitorData', JSON.stringify(visitorData));
+        console.log('Stored visitor data:', visitorData);
 
-        console.log('Visitor tracked:', data);
         setError(null);
       } catch (error) {
-        console.error('Error tracking visitor:', error);
-        setError(error instanceof Error ? error.message : 'Failed to track visitor');
+        console.error('Error in visitor tracking:', error);
+        // Provide more detailed error message
+        const errorMessage = error instanceof Error 
+          ? `Tracking failed: ${error.message}`
+          : 'Failed to track visitor: Unknown error';
+        setError(errorMessage);
+        
+        // Try to recover stored data if available
+        try {
+          const storedData = localStorage.getItem('visitorData');
+          if (storedData) {
+            const parsedData = JSON.parse(storedData);
+            setVisitorId(parsedData.visitorId);
+            console.log('Recovered visitor ID from stored data:', parsedData.visitorId);
+          }
+        } catch (recoveryError) {
+          console.error('Failed to recover stored visitor data:', recoveryError);
+        }
       }
     };
 
