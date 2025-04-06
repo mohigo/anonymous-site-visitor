@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db';
+import clientPromise from '@/lib/mongodb';
 import Contact from '@/lib/models/contact';
 
 export async function POST(request: Request) {
   try {
-    // Connect to database
-    await connectToDatabase();
+    // Connect to database using the same client as visitor analytics
+    const client = await clientPromise;
+    const db = client.db('visitor-analytics');
+    const collection = db.collection('contacts');
 
     // Parse the request body
     const body = await request.json();
@@ -29,16 +31,18 @@ export async function POST(request: Request) {
     }
 
     // Create new contact submission
-    const contact = await Contact.create({
+    const contact = await collection.insertOne({
       name,
       email,
       subject,
       message,
       source,
+      status: 'new',
+      createdAt: new Date()
     });
 
     return NextResponse.json(
-      { message: 'Contact submission successful', id: contact._id },
+      { message: 'Contact submission successful', id: contact.insertedId },
       { status: 201 }
     );
   } catch (error) {
