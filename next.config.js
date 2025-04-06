@@ -1,12 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Disable all development indicators and analytics
+  // Disable all development indicators
   devIndicators: {
     buildActivity: false,
     buildActivityPosition: 'bottom-right',
   },
-  // Disable Vercel Analytics and Speed Insights
-  vercelAnalytics: false,
+  // Disable Speed Insights and Analytics
+  analyticsId: false,
   experimental: {
     disableOptimizedLoading: true,
     webVitalsAttribution: ['CLS', 'LCP'],
