@@ -31,9 +31,9 @@ export default function Home() {
               <Link href="/analytics" className="bg-white text-blue-600 px-8 py-3 rounded-full font-semibold hover:bg-blue-50 transition-colors inline-flex items-center justify-center">
                 View Analytics
               </Link>
-              <button className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition-colors inline-flex items-center justify-center">
+              <Link href="/get-started" className="bg-transparent border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white/10 transition-colors inline-flex items-center justify-center">
                 Get Started
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -130,9 +130,12 @@ export default function Home() {
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold mb-6">Ready to Get Started?</h2>
           <p className="text-xl mb-8">Start identifying your visitors today</p>
-          <button className="bg-white text-blue-600 px-8 py-3 rounded-full font-semibold hover:bg-blue-50 transition-colors">
+          <Link 
+            href="/get-started" 
+            className="bg-white text-blue-600 px-8 py-3 rounded-full font-semibold hover:bg-blue-50 transition-colors inline-flex items-center justify-center"
+          >
             Start Free Trial
-          </button>
+          </Link>
         </div>
       </section>
       </main>
