@@ -1,8 +1,9 @@
 import * as tf from '@tensorflow/tfjs';
-import { VisitorData } from './fingerprint';
+import { VisitorData } from './types';
+import { detectCountry } from './geolocation';
 
 interface FeatureVector {
-  userAgentHash: number[];
+  userAgentHash: number;
   screenFeatures: number[];
   timeFeatures: number[];
   browserFeatures: number[];
@@ -18,138 +19,146 @@ interface AnomalyScore {
 export class MLFingerprint {
   private model: tf.LayersModel | null = null;
   private anomalyModel: tf.LayersModel | null = null;
-  private readonly vectorSize = 40;
+  private readonly vectorSize = 16;
   private isInitialized = false;
+  private isInitializing = false;
+  private initializationPromise: Promise<void> | null = null;
 
   async initialize() {
-    try {
-      // Initialize TensorFlow.js
-      await tf.ready();
+    if (this.model) return;
+    if (this.isInitializing) {
+      // Wait for existing initialization to complete
+      await this.initializationPromise;
+      return;
+    }
 
-      // Set backend based on environment
-      if (typeof window !== 'undefined') {
-        // Client-side: try WebGL first, fall back to CPU
-        try {
-          await tf.setBackend('webgl');
-        } catch (e) {
-          console.warn('WebGL backend not available, falling back to CPU');
+    this.isInitializing = true;
+    this.initializationPromise = (async () => {
+      try {
+        // Initialize TensorFlow.js
+        await tf.ready();
+
+        // Set backend based on environment
+        if (typeof window !== 'undefined') {
+          // Client-side: try WebGL first, fall back to CPU
+          try {
+            await tf.setBackend('webgl');
+          } catch (e) {
+            console.warn('WebGL backend not available, falling back to CPU');
+            await tf.setBackend('cpu');
+          }
+        } else {
+          // Server-side: use CPU backend
           await tf.setBackend('cpu');
         }
-      } else {
-        // Server-side: use CPU backend
-        await tf.setBackend('cpu');
+
+        // Clean up any existing models and tensors
+        if (this.model) {
+          this.model.dispose();
+          this.model = null;
+        }
+        if (this.anomalyModel) {
+          this.anomalyModel.dispose();
+          this.anomalyModel = null;
+        }
+
+        // Reset TensorFlow's internal state
+        tf.engine().reset();
+        
+        // Wait a bit to ensure cleanup is complete
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Create models with unique names
+        const modelName = `fingerprint_model_${Date.now()}`;
+        const anomalyModelName = `anomaly_model_${Date.now()}`;
+
+        // Create a simple neural network for fingerprint generation
+        this.model = tf.sequential({
+          name: modelName,
+          layers: [
+            tf.layers.dense({ 
+              name: `${modelName}_dense1`,
+              inputShape: [this.vectorSize],
+              units: 32, 
+              activation: 'relu',
+              kernelInitializer: 'glorotNormal'
+            }),
+            tf.layers.dropout({ 
+              name: `${modelName}_dropout`,
+              rate: 0.2 
+            }),
+            tf.layers.dense({ 
+              name: `${modelName}_dense2`,
+              units: this.vectorSize, 
+              activation: 'sigmoid',
+              kernelInitializer: 'glorotNormal'
+            })
+          ]
+        });
+
+        await this.model.compile({
+          optimizer: tf.train.adam(0.001),
+          loss: 'binaryCrossentropy',
+          metrics: ['accuracy']
+        });
+
+        // Create an autoencoder for anomaly detection
+        this.anomalyModel = tf.sequential({
+          name: anomalyModelName,
+          layers: [
+            // Encoder
+            tf.layers.dense({ 
+              name: `${anomalyModelName}_encoder1`,
+              inputShape: [this.vectorSize],
+              units: 32, 
+              activation: 'relu',
+              kernelInitializer: 'glorotNormal'
+            }),
+            tf.layers.dense({ 
+              name: `${anomalyModelName}_encoder2`,
+              units: 16, 
+              activation: 'relu',
+              kernelInitializer: 'glorotNormal'
+            }),
+            // Decoder
+            tf.layers.dense({ 
+              name: `${anomalyModelName}_decoder1`,
+              units: 32, 
+              activation: 'relu',
+              kernelInitializer: 'glorotNormal'
+            }),
+            tf.layers.dense({ 
+              name: `${anomalyModelName}_decoder2`,
+              units: this.vectorSize,
+              activation: 'sigmoid',
+              kernelInitializer: 'glorotNormal'
+            })
+          ]
+        });
+
+        await this.anomalyModel.compile({
+          optimizer: tf.train.adam(0.001),
+          loss: 'meanSquaredError',
+          metrics: ['mse']
+        });
+
+        this.isInitialized = true;
+      } finally {
+        this.isInitializing = false;
       }
+    })();
 
-      // Clean up any existing models and tensors
-      if (this.model) {
-        this.model.dispose();
-        this.model = null;
-      }
-      if (this.anomalyModel) {
-        this.anomalyModel.dispose();
-        this.anomalyModel = null;
-      }
-
-      // Reset TensorFlow's internal state
-      tf.engine().reset();
-      
-      // Wait a bit to ensure cleanup is complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // Create models with unique names
-      const modelName = `fingerprint_model_${Date.now()}`;
-      const anomalyModelName = `anomaly_model_${Date.now()}`;
-
-      // Create a simple neural network for fingerprint generation
-      this.model = tf.sequential({
-        name: modelName,
-        layers: [
-          tf.layers.dense({ 
-            name: `${modelName}_dense1`,
-            inputShape: [40], 
-            units: 32, 
-            activation: 'relu',
-            kernelInitializer: 'glorotNormal'
-          }),
-          tf.layers.dropout({ 
-            name: `${modelName}_dropout`,
-            rate: 0.2 
-          }),
-          tf.layers.dense({ 
-            name: `${modelName}_dense2`,
-            units: this.vectorSize, 
-            activation: 'sigmoid',
-            kernelInitializer: 'glorotNormal'
-          })
-        ]
-      });
-
-      await this.model.compile({
-        optimizer: tf.train.adam(0.001),
-        loss: 'binaryCrossentropy',
-        metrics: ['accuracy']
-      });
-
-      // Create an autoencoder for anomaly detection
-      this.anomalyModel = tf.sequential({
-        name: anomalyModelName,
-        layers: [
-          // Encoder
-          tf.layers.dense({ 
-            name: `${anomalyModelName}_encoder1`,
-            inputShape: [40], 
-            units: 32, 
-            activation: 'relu',
-            kernelInitializer: 'glorotNormal'
-          }),
-          tf.layers.dense({ 
-            name: `${anomalyModelName}_encoder2`,
-            units: 16, 
-            activation: 'relu',
-            kernelInitializer: 'glorotNormal'
-          }),
-          // Decoder
-          tf.layers.dense({ 
-            name: `${anomalyModelName}_decoder1`,
-            units: 32, 
-            activation: 'relu',
-            kernelInitializer: 'glorotNormal'
-          }),
-          tf.layers.dense({ 
-            name: `${anomalyModelName}_decoder2`,
-            units: 40, 
-            activation: 'sigmoid',
-            kernelInitializer: 'glorotNormal'
-          })
-        ]
-      });
-
-      await this.anomalyModel.compile({
-        optimizer: tf.train.adam(0.001),
-        loss: 'meanSquaredError',
-        metrics: ['mse']
-      });
-
-      this.isInitialized = true;
-    } catch (error) {
-      console.error('Error initializing TensorFlow.js:', error);
-      this.isInitialized = false;
-      throw new Error('Failed to initialize ML system');
-    }
+    await this.initializationPromise;
   }
 
-  private hashString(str: string | undefined): number[] {
-    // Handle undefined or null input
-    if (!str) {
-      return new Array(16).fill(0.5);
-    }
-
-    // Convert string to fixed-length number array using simple hashing
-    const hash = new Array(16).fill(0);
+  private hashString(str: string): number {
+    let hash = 0;
     for (let i = 0; i < str.length; i++) {
-      hash[i % 16] = (hash[i % 16] + str.charCodeAt(i)) % 256;
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
     }
-    return hash.map(h => h / 255);
+    return Math.abs(hash) / 2147483647; // Normalize to [0,1]
   }
 
   private extractFeatures(visitor: VisitorData): FeatureVector {
@@ -176,40 +185,19 @@ export class MLFingerprint {
         browser === 'Safari' ? 1 : 0,
         browser === 'Edge' ? 1 : 0,
         browser === 'Opera' ? 1 : 0,
-        browser === 'Unknown' ? 1 : 0
+        browser === 'Unknown' ? 1 : 0,
+        this.hashString(visitor.country + visitor.countryCode) // Add geolocation feature
       ]
     };
   }
 
   private concatenateFeatures(features: FeatureVector): number[] {
-    // Calculate total length of each feature array
-    const totalLength = 
-      features.userAgentHash.length +    // 16 values
-      features.screenFeatures.length +    // 2 values
-      features.timeFeatures.length +      // 6 values
-      features.browserFeatures.length;    // 6 values
-
-    // Calculate required padding to reach 40 values
-    const paddingLength = Math.max(0, this.vectorSize - totalLength);
-    const padding = new Array(paddingLength).fill(0.5);
-
-    const vector = [
-      ...features.userAgentHash,      // 16 values
-      ...features.screenFeatures,     // 2 values
-      ...features.timeFeatures,       // 6 values
-      ...features.browserFeatures,    // 6 values
-      ...padding                      // 10 padding values to reach 40 total
+    return [
+      features.userAgentHash,
+      ...features.screenFeatures,
+      ...features.timeFeatures,
+      ...features.browserFeatures
     ];
-
-    // Double-check vector length
-    if (vector.length !== this.vectorSize) {
-      console.error(`Invalid vector length: ${vector.length}, expected: ${this.vectorSize}`);
-      // Ensure exactly 40 values
-      while (vector.length < this.vectorSize) vector.push(0.5);
-      while (vector.length > this.vectorSize) vector.pop();
-    }
-
-    return vector;
   }
 
   public async generateFingerprint(): Promise<string> {
@@ -222,13 +210,17 @@ export class MLFingerprint {
       return `${window.screen?.width || 1920}x${window.screen?.height || 1080}`;
     };
 
+    // Get geolocation data
+    const geoData = await detectCountry();
+
     const visitorData: VisitorData = {
       visitorId: crypto.randomUUID(),
       firstVisit: new Date().toISOString(),
       lastVisit: new Date().toISOString(),
       visitCount: 1,
       browser: this.detectBrowser(),
-      country: await this.detectCountry(),
+      country: geoData.country,
+      countryCode: geoData.countryCode,
       preferences: {
         theme: 'light',
         language: 'en'
@@ -266,25 +258,6 @@ export class MLFingerprint {
     if (isEdge) return 'Edge';
     if (isOpera) return 'Opera';
     return 'Unknown';
-  }
-
-  private async detectCountry(): Promise<string> {
-    if (typeof Intl === 'undefined') return 'unknown';
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    
-    // Simple timezone to country mapping
-    const timezoneMap: { [key: string]: string } = {
-      'America/New_York': 'United States',
-      'America/Los_Angeles': 'United States',
-      'Europe/London': 'United Kingdom',
-      'Europe/Paris': 'France',
-      'Europe/Berlin': 'Germany',
-      'Asia/Tokyo': 'Japan',
-      'Asia/Shanghai': 'China',
-      'Australia/Sydney': 'Australia'
-    };
-
-    return timezoneMap[timezone] || 'unknown';
   }
 
   async detectAnomalies(visitor: VisitorData): Promise<AnomalyScore> {
@@ -354,101 +327,50 @@ export class MLFingerprint {
     return process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
   }
 
-  async detectPatterns(visitorData: VisitorData): Promise<{
-    peakHours: number[];
-    browserPatterns: { [key: string]: number };
-    returningVisitorRate: number;
-    averageVisitDuration: number;
-    anomalies: AnomalyScore[];
+  public async detectPatterns(visitorData: VisitorData): Promise<{
+    behaviorPatterns: string[];
+    anomalyScore: {
+      isAnomaly: boolean;
+      confidence: number;
+    };
   }> {
-    try {
-      // Initialize with current visitor
-      const visitors: VisitorData[] = [visitorData];
-
-      try {
-        // Fetch visitor data from API with absolute URL
-        const baseUrl = this.getBaseUrl();
-        const response = await fetch(`${baseUrl}/api/visitors`);
-        if (response.ok) {
-          const data = await response.json();
-          if (Array.isArray(data.visitors)) {
-            visitors.push(...data.visitors.filter((v: VisitorData) => v.visitorId !== visitorData.visitorId));
+    // Ensure model is initialized
+    if (!this.model) {
+      await this.initialize();
+      if (!this.model) {
+        console.warn('Failed to initialize ML model');
+        return {
+          behaviorPatterns: ['Model initialization failed'],
+          anomalyScore: {
+            isAnomaly: false,
+            confidence: 0
           }
-        }
-      } catch (error) {
-        console.warn('Could not fetch historical visitor data:', error);
+        };
       }
+    }
 
-      // Analyze temporal patterns
-      const hourCounts = new Array(24).fill(0);
-      visitors.forEach(visitor => {
-        const hour = new Date(visitor.timestamp || Date.now()).getHours();
-        hourCounts[hour]++;
-      });
+    const features = this.extractFeatures(visitorData);
+    const inputVector = this.concatenateFeatures(features);
+    const tensorInput = tf.tensor2d([inputVector]);
 
-      // Find peak hours (hours with visits > mean + std)
-      const mean = hourCounts.reduce((a, b) => a + b) / 24;
-      const std = Math.sqrt(hourCounts.reduce((a, b) => a + Math.pow(b - mean, 2)) / 24);
-      const peakHours = hourCounts
-        .map((count, hour) => ({ hour, count }))
-        .filter(({ count }) => count > mean + std)
-        .map(({ hour }) => hour);
+    try {
+      const prediction = this.model.predict(tensorInput) as tf.Tensor;
+      const score = (await prediction.data())[0];
 
-      // Analyze browser patterns
-      const browserCounts = visitors.reduce((acc: { [key: string]: number }, visitor: VisitorData) => {
-        const browser = visitor.browser || 'Unknown';
-        acc[browser] = (acc[browser] || 0) + 1;
-        return acc;
-      }, {});
-
-      // Calculate returning visitor rate
-      const uniqueVisitors = new Set(visitors.map(v => v.visitorId)).size;
-      const returningVisitorRate = visitors.length > 1 ? 
-        (visitors.length - uniqueVisitors) / visitors.length : 0;
-
-      // Calculate average visit duration
-      const visitorDurations = visitors.reduce((acc, visitor) => {
-        if (!acc[visitor.visitorId]) {
-          acc[visitor.visitorId] = {
-            firstVisit: visitor.timestamp || Date.now(),
-            lastVisit: visitor.timestamp || Date.now()
-          };
-        } else {
-          acc[visitor.visitorId].lastVisit = Math.max(
-            acc[visitor.visitorId].lastVisit,
-            visitor.timestamp || Date.now()
-          );
+      const patterns: string[] = [];
+      if (score > 0.8) patterns.push('Likely bot or automated traffic');
+      if (score < 0.2) patterns.push('Likely genuine user');
+      if (visitorData.visitCount > 10) patterns.push('Frequent visitor');
+      
+      return {
+        behaviorPatterns: patterns,
+        anomalyScore: {
+          isAnomaly: score > 0.7,
+          confidence: score
         }
-        return acc;
-      }, {} as { [key: string]: { firstVisit: number; lastVisit: number } });
-
-      const durations = Object.values(visitorDurations)
-        .map(({ firstVisit, lastVisit }) => lastVisit - firstVisit)
-        .filter(duration => duration > 0);
-
-      const averageVisitDuration = durations.length > 0
-        ? durations.reduce((a, b) => a + b) / durations.length
-        : 0;
-
-      // Detect anomalies for current visitor
-      const anomalyScore = await this.detectAnomalies(visitorData);
-
-      return {
-        peakHours,
-        browserPatterns: browserCounts,
-        returningVisitorRate,
-        averageVisitDuration,
-        anomalies: [anomalyScore]
       };
-    } catch (error) {
-      console.error('Error in pattern detection:', error);
-      return {
-        peakHours: [],
-        browserPatterns: {},
-        returningVisitorRate: 0,
-        averageVisitDuration: 0,
-        anomalies: []
-      };
+    } finally {
+      tensorInput.dispose();
     }
   }
 } 

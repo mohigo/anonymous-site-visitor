@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { VisitorData } from '@/lib/fingerprint';
+import { VisitorData } from '@/lib/types';
+import { UserIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 export default function VisitorProfile() {
   const [visitorData, setVisitorData] = useState<VisitorData | null>(null);
@@ -13,36 +14,44 @@ export default function VisitorProfile() {
       // Get current visitor ID from localStorage
       const storedData = localStorage.getItem('visitorData');
       const currentVisitor = storedData ? JSON.parse(storedData) : null;
-      const visitorId = currentVisitor?.visitorId;
-
-      if (!visitorId) {
-        throw new Error('No visitor ID available');
+      
+      if (!currentVisitor?.visitorId) {
+        // If no visitor data, wait for it to be initialized
+        setLoading(false);
+        setVisitorData(null);
+        return;
       }
 
       // Always fetch fresh data from server
-      const response = await fetch(`/api/visitor?id=${visitorId}`);
+      const response = await fetch(`/api/visitor?id=${currentVisitor.visitorId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch visitor data');
       }
       const data = await response.json();
       
-      if (!data.visitor) {
-        throw new Error('No visitor data available');
+      if (!data || data.error) {
+        throw new Error(data.error || 'No visitor data available');
       }
 
-      setVisitorData(data.visitor);
+      setVisitorData(data);
+      setError(null);
     } catch (err) {
       console.error('Error fetching visitor data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load visitor data');
+      setVisitorData(null);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    // Initial fetch
     fetchVisitorData();
-    // Refresh data every 30 seconds
+
+    // Set up polling interval
     const interval = setInterval(fetchVisitorData, 30000);
+
+    // Cleanup interval on unmount
     return () => clearInterval(interval);
   }, []);
 
@@ -57,23 +66,27 @@ export default function VisitorProfile() {
     );
   }
 
-  if (error) {
+  if (!visitorData && !error) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Visitor Profile</h2>
-        <div className="text-red-500 p-4 text-center">
-          {error}
+        <div className="text-center p-8">
+          <div className="bg-blue-50 rounded-full p-3 mx-auto w-fit mb-4">
+            <UserIcon className="h-8 w-8 text-blue-600" />
+          </div>
+          <p className="text-gray-600">Welcome! Your profile will be available after your first interaction.</p>
         </div>
       </div>
     );
   }
 
-  if (!visitorData) {
+  if (error) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Visitor Profile</h2>
-        <div className="text-gray-500 p-4 text-center">
-          No visitor data available
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+          <ExclamationCircleIcon className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-red-600">{error}</p>
         </div>
       </div>
     );

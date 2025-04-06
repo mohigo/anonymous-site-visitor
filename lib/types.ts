@@ -5,6 +5,7 @@ export interface VisitorData {
   visitCount: number;
   browser: string;
   country: string;
+  countryCode: string;
   preferences: {
     theme: string;
     language: string;
@@ -18,4 +19,10 @@ export interface VisitorData {
       confidence: number;
     };
   };
+}
+
+export interface AnomalyScore {
+  isAnomaly: boolean;
+  confidence: number;
+  reason?: string;
 } 

@@ -1,105 +1,94 @@
 'use client';
 
-import { useEffect } from 'react';
-import { MLFingerprint } from '@/lib/ml-fingerprint';
-
-function detectBrowser(): string {
-  if (typeof window === 'undefined') return 'Unknown';
-  
-  const userAgent = window.navigator.userAgent;
-  const isChrome = /Chrome/.test(userAgent) && !/Chromium|Edge/.test(userAgent);
-  const isFirefox = /Firefox/.test(userAgent);
-  const isSafari = /Safari/.test(userAgent) && !/Chrome/.test(userAgent);
-  const isEdge = /Edge/.test(userAgent);
-  const isOpera = /Opera|OPR/.test(userAgent);
-
-  if (isChrome) return 'Chrome';
-  if (isFirefox) return 'Firefox';
-  if (isSafari) return 'Safari';
-  if (isEdge) return 'Edge';
-  if (isOpera) return 'Opera';
-  return 'Unknown';
-}
+import { useEffect, useState } from 'react';
+import { generateVisitorFingerprint } from '@/lib/fingerprint';
+import { VisitorData } from '@/lib/types';
 
 export default function VisitorTracker() {
+  const [visitorId, setVisitorId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    const trackVisitor = async () => {
+    const trackVisit = async () => {
       try {
-        // Check if we've already tracked this visit in the current session
-        const lastTracked = sessionStorage.getItem('lastTracked');
-        const now = Date.now();
-        if (lastTracked && (now - parseInt(lastTracked)) < 30 * 60 * 1000) { // 30 minutes session
-          return; // Skip if tracked recently
-        }
+        // Generate visitor fingerprint
+        const fingerprint = await generateVisitorFingerprint();
         
-        // Initialize ML fingerprinting
-        const mlFingerprint = new MLFingerprint();
-        await mlFingerprint.initialize();
+        // Extract just the visitorId from the fingerprint data
+        const visitorIdString = typeof fingerprint === 'string' ? fingerprint : fingerprint.visitorId;
+        setVisitorId(visitorIdString);
 
-        // Get stored visitor data
-        const storedData = localStorage.getItem('visitorData');
-        let visitorData = storedData ? JSON.parse(storedData) : null;
+        // Get screen resolution
+        const screenResolution = `${window.screen?.width || 1920}x${window.screen?.height || 1080}`;
 
-        // Generate new fingerprint and visitor ID if needed
-        if (!visitorData || !visitorData.fingerprint || !visitorData.visitorId) {
-          const fingerprint = await mlFingerprint.generateFingerprint();
-          visitorData = {
-            visitorId: crypto.randomUUID(),
-            fingerprint,
-            firstVisit: new Date().toISOString(),
-            lastVisit: new Date().toISOString(),
-            visitCount: 1,
-            browser: detectBrowser(),
-            screenResolution: `${window.screen.width}x${window.screen.height}`,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-            preferences: {
-              theme: 'light',
-              language: navigator.language || 'en'
-            }
-          };
-        } else {
-          // Update existing visitor data
-          visitorData = {
-            ...visitorData,
-            lastVisit: new Date().toISOString(),
-            browser: detectBrowser(),
-            screenResolution: `${window.screen.width}x${window.screen.height}`,
-            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-          };
-        }
+        // Get browser info
+        const userAgent = window.navigator.userAgent;
+        const browser = 
+          /Chrome/.test(userAgent) && !/Chromium|Edge/.test(userAgent) ? 'Chrome' :
+          /Firefox/.test(userAgent) ? 'Firefox' :
+          /Safari/.test(userAgent) && !/Chrome/.test(userAgent) ? 'Safari' :
+          /Edge/.test(userAgent) ? 'Edge' :
+          /Opera|OPR/.test(userAgent) ? 'Opera' : 'Unknown';
 
-        // Detect patterns and anomalies
-        const patterns = await mlFingerprint.detectPatterns(visitorData);
-        visitorData.patterns = patterns;
+        // Check if we should increment visit count (30 minutes cooldown)
+        const lastVisitTime = localStorage.getItem('lastVisitTime');
+        const currentTime = Date.now();
+        const shouldIncrementVisit = !lastVisitTime || (currentTime - parseInt(lastVisitTime)) >= 30 * 60 * 1000;
 
-        // Store updated data
-        localStorage.setItem('visitorData', JSON.stringify(visitorData));
+        // Save current visit time
+        localStorage.setItem('lastVisitTime', currentTime.toString());
 
-        // Send to server
+        // Send visitor data to API
         const response = await fetch('/api/visitor', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(visitorData),
+          body: JSON.stringify({
+            visitorId: visitorIdString,
+            browser,
+            screenResolution,
+            preferences: {
+              theme: localStorage.getItem('theme') || 'light',
+              language: navigator.language || 'en'
+            },
+            shouldIncrementVisit
+          })
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-          throw new Error('Failed to update visitor data');
+          throw new Error(data.error || data.details || 'Failed to update visitor data');
         }
 
-        // Update last tracked time
-        sessionStorage.setItem('lastTracked', now.toString());
+        // Store visitor data in localStorage for profile access
+        localStorage.setItem('visitorData', JSON.stringify({
+          visitorId: visitorIdString,
+          ...data
+        }));
+
+        console.log('Visitor tracked:', data);
+        setError(null);
       } catch (error) {
         console.error('Error tracking visitor:', error);
+        setError(error instanceof Error ? error.message : 'Failed to track visitor');
       }
     };
 
-    trackVisitor();
-  }, []);
+    trackVisit();
 
-  // Return null since this is just a tracking component
-  return null;
+    // Cleanup function
+    return () => {
+      // Any cleanup code if needed
+    };
+  }, []); // Empty dependency array means this runs once on mount
+
+  if (error) {
+    console.error('VisitorTracker error:', error);
+  }
+
+  return null; // This component doesn't render anything
 }
 
 async function detectCountry(timezone: string): Promise<string> {

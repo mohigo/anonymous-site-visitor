@@ -1,69 +1,127 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
-import { VisitorData } from '@/lib/fingerprint';
+import { VisitorData } from '@/lib/types';
+import { detectCountry } from '@/lib/geolocation';
 import { generateServerFingerprint, analyzeVisitorPatterns } from '@/lib/fingerprint';
 
 const dbName = 'visitor-analytics';
 
-export async function POST(request: Request) {
+export async function GET(req: NextRequest) {
   try {
-    const visitor = await request.json();
-    const now = new Date().toISOString();
-    
-    const client = await clientPromise;
-    const db = client.db(dbName);
-    const collection = db.collection('visitors');
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
 
-    // Try to find an existing visitor with the same fingerprint pattern
-    const existingVisitor = await collection.findOne({ visitorId: visitor.visitorId });
-
-    if (existingVisitor) {
-      // Check if enough time has passed since last visit (30 minutes)
-      const lastVisitTime = new Date(existingVisitor.lastVisit).getTime();
-      const currentTime = new Date(now).getTime();
-      const shouldIncrementCount = !lastVisitTime || (currentTime - lastVisitTime) >= 30 * 60 * 1000;
-
-      // Update existing visitor
-      await collection.updateOne(
-        { visitorId: visitor.visitorId },
-        {
-          $set: {
-            lastVisit: now,
-            browser: visitor.browser || 'Unknown',
-            country: visitor.country || 'Unknown',
-            screenResolution: visitor.screenResolution || '1920x1080',
-            preferences: visitor.preferences || { theme: 'light', language: 'en' },
-            timestamp: Date.now()
-          },
-          ...(shouldIncrementCount ? { $inc: { visitCount: 1 } } : {})
-        }
-      );
-    } else {
-      // Insert new visitor with proper initialization
-      await collection.insertOne({
-        ...visitor,
-        firstVisit: now,
-        lastVisit: now,
-        visitCount: 1,
-        browser: visitor.browser || 'Unknown',
-        country: visitor.country || 'Unknown',
-        screenResolution: visitor.screenResolution || '1920x1080',
-        preferences: visitor.preferences || { theme: 'light', language: 'en' },
-        timestamp: Date.now()
-      });
+    if (!id) {
+      return NextResponse.json({ error: 'Visitor ID is required' }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    const client = await clientPromise;
+    const db = client.db('visitor-analytics');
+    const collection = db.collection('visitors');
+    const visitor = await collection.findOne({ visitorId: id });
+
+    if (!visitor) {
+      return NextResponse.json({ error: 'Visitor not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(visitor);
   } catch (error) {
-    console.error('Error saving visitor data:', error);
-    return NextResponse.json(
-      { error: 'Failed to save visitor data' },
-      { status: 500 }
-    );
+    console.error('Error fetching visitor:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-export async function GET(request: Request) {
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { visitorId, shouldIncrementVisit } = body;
+
+    if (!visitorId) {
+      return NextResponse.json({ error: 'Visitor ID is required' }, { status: 400 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db('visitor-analytics');
+    const collection = db.collection('visitors');
+
+    // Get geolocation data
+    console.log('Getting geolocation data...');
+    const geoData = await detectCountry(req);
+    console.log('Geolocation data:', geoData);
+
+    // First, try to find the existing visitor
+    console.log('Looking for existing visitor:', visitorId);
+    const existingVisitor = await collection.findOne({ visitorId });
+    console.log('Existing visitor:', existingVisitor);
+
+    // Prepare the update operation based on whether the visitor exists
+    const updateOperation = !existingVisitor ? {
+      // New visitor: set all fields including initial visit count
+      $set: {
+        visitorId,
+        firstVisit: new Date(),
+        lastVisit: new Date(),
+        visitCount: 1,
+        browser: body.browser || 'Unknown',
+        country: geoData.country,
+        countryCode: geoData.countryCode,
+        screenResolution: body.screenResolution || '1920x1080',
+        preferences: body.preferences || { theme: 'light', language: 'en' },
+        timestamp: Date.now()
+      }
+    } : {
+      // Existing visitor: update fields and optionally increment visit count
+      $set: {
+        lastVisit: new Date(),
+        browser: body.browser || existingVisitor.browser,
+        country: geoData.country,
+        countryCode: geoData.countryCode,
+        screenResolution: body.screenResolution || existingVisitor.screenResolution,
+        preferences: body.preferences || existingVisitor.preferences,
+        timestamp: Date.now()
+      },
+      ...(shouldIncrementVisit ? {
+        $inc: { visitCount: 1 }
+      } : {})
+    };
+
+    console.log('Update operation:', JSON.stringify(updateOperation, null, 2));
+
+    // Update or insert the visitor
+    const result = await collection.findOneAndUpdate(
+      { visitorId },
+      updateOperation,
+      {
+        upsert: true,
+        returnDocument: 'after'
+      }
+    );
+
+    console.log('MongoDB result:', result);
+
+    if (!result) {
+      console.error('Failed to update visitor - no result');
+      return NextResponse.json({ error: 'Failed to update visitor' }, { status: 500 });
+    }
+
+    // Return the updated document
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error('Error updating visitor:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack
+      });
+    }
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
+  }
+}
+
+export async function GET_ML(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const visitorId = searchParams.get('id');
@@ -97,6 +155,7 @@ export async function GET(request: Request) {
       visitCount: visitor.visitCount || 1,
       browser: visitor.browser || 'Unknown',
       country: visitor.country || 'Unknown',
+      countryCode: visitor.countryCode || 'XX',
       screenResolution: visitor.screenResolution || '1920x1080',
       preferences: visitor.preferences || { theme: 'light', language: 'en' },
       timestamp: visitor.timestamp || Date.now()

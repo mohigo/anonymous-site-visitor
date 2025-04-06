@@ -143,7 +143,11 @@ export async function GET() {
       },
       {
         $group: {
-          _id: { $hour: '$lastVisit' },
+          _id: { 
+            $hour: {
+              $add: ['$lastVisit', 0] // Keep in UTC, client will convert
+            }
+          },
           count: { $sum: 1 }
         }
       },
@@ -160,7 +164,7 @@ export async function GET() {
     const average = hourlyData.reduce((a, b) => a + b, 0) / 24;
     const peakHours = hourlyData
       .map((count, hour) => ({ hour, count }))
-      .filter(({ count }) => count > average)
+      .filter(({ count }) => count > average * 1.5) // Increased threshold for peak hours
       .map(({ hour }) => hour);
 
     // Get active visitors today (since midnight)
