@@ -5,8 +5,6 @@ const nextConfig = {
     buildActivity: false,
     buildActivityPosition: 'bottom-right',
   },
-  // Disable Speed Insights and Analytics
-  analyticsId: false,
   experimental: {
     disableOptimizedLoading: true,
     webVitalsAttribution: ['CLS', 'LCP'],
