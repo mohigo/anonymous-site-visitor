@@ -9,8 +9,9 @@ services:
       - .:/app
       - /app/node_modules
       - /app/.next
+      - ./certs:/app/certs
     ports:
-      - "3000:3000"
+      - "443:443"
     environment:
       - NODE_ENV=${NODE_ENV:-development}
       - MONGODB_URI=mongodb://mongodb:27017/visitor-analytics
@@ -18,11 +19,13 @@ services:
       - VERCEL_ANALYTICS_DISABLED=1
       - NEXT_PUBLIC_VERCEL_DEBUG=0
       - NEXT_PUBLIC_SHOW_SPEED_INSIGHTS=false
+      - HTTPS=true
+      - PORT=443
     depends_on:
       - mongodb
     networks:
       - app-network
-    command: ${NODE_ENV:-development} == 'development' && npm run dev || npm start
+    command: npm run dev
 
   mongodb:
     image: mongo:latest

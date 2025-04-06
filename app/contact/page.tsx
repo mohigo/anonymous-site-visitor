@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { EnvelopeIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { useSearchParams } from 'next/navigation';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -18,13 +19,33 @@ const stagger = {
   }
 };
 
+const planMessages = {
+  free: "I would like to start with the Free plan.",
+  pro: "I would like to start the Pro trial.",
+  business: "I would like to learn more about the Business plan."
+};
+
 export default function Contact() {
+  const searchParams = useSearchParams();
+  const plan = searchParams.get('plan');
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     subject: '',
     message: ''
   });
+
+  useEffect(() => {
+    if (plan && planMessages[plan as keyof typeof planMessages]) {
+      setFormData(prev => ({
+        ...prev,
+        subject: `${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Inquiry`,
+        message: planMessages[plan as keyof typeof planMessages]
+      }));
+    }
+  }, [plan]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
@@ -40,7 +61,7 @@ export default function Contact() {
         },
         body: JSON.stringify({
           ...formData,
-          source: 'contact_form'
+          source: plan ? `start_${plan}` : 'contact_form'
         }),
       });
 

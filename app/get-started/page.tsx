@@ -15,7 +15,7 @@ const tiers = [
   {
     name: 'Free',
     id: 'free',
-    href: '#',
+    href: '/contact?plan=free',
     price: { monthly: '$0' },
     description: 'Perfect for personal projects and small websites.',
     features: [
@@ -31,7 +31,7 @@ const tiers = [
   {
     name: 'Pro',
     id: 'pro',
-    href: '#',
+    href: '/contact?plan=pro',
     price: { monthly: '$99' },
     description: 'Ideal for growing businesses and startups.',
     features: [
@@ -49,7 +49,7 @@ const tiers = [
   {
     name: 'Business',
     id: 'business',
-    href: '#',
+    href: '/contact?plan=business',
     price: { monthly: '$1,999' },
     description: 'For enterprises with high-volume traffic needs.',
     features: [
@@ -233,7 +233,7 @@ export default function GetStartedPage() {
                     href={tier.href}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    className={`mt-8 block w-full rounded-md px-3 py-2 text-center text-sm font-semibold leading-6 
+                    className={`mt-8 block w-full rounded-md px-3 py-3 text-center text-sm font-semibold leading-6 
                       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 transition-all duration-200
                       ${tier.mostPopular
                         ? 'bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600 shadow-lg shadow-indigo-500/50'
@@ -242,33 +242,6 @@ export default function GetStartedPage() {
                   >
                     {tier.cta}
                   </motion.a>
-
-                  {tier.name === 'Business' ? (
-                    <button
-                      onClick={handleContactSales}
-                      className={`block w-full py-3 px-6 text-center rounded-lg shadow-lg font-semibold transition-all duration-200 ${
-                        hoveredTier === 'business'
-                          ? 'bg-blue-700 text-white shadow-blue-500/30'
-                          : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/30'
-                      }`}
-                    >
-                      Contact Sales
-                    </button>
-                  ) : (
-                    <motion.a
-                      href={tier.href}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className={`mt-8 block w-full rounded-md px-3 py-2 text-center text-sm font-semibold leading-6 
-                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 transition-all duration-200
-                        ${tier.mostPopular
-                          ? 'bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600 shadow-lg shadow-indigo-500/50'
-                          : 'bg-white text-blue-600 hover:bg-blue-50 focus-visible:outline-white'
-                        }`}
-                    >
-                      {tier.cta}
-                    </motion.a>
-                  )}
                 </motion.div>
               ))}
             </motion.div>
