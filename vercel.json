@@ -2,9 +2,6 @@
   "github": {
     "silent": true
   },
-  "speedInsights": {
-    "enabled": false
-  },
   "devCommand": "next dev",
   "buildCommand": "next build",
   "cleanUrls": true,
