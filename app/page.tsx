@@ -225,7 +225,7 @@ export default function Home() {
                   step: 1,
                   title: "Visitor Detection",
                   description: "Our system automatically detects and analyzes visitor characteristics",
-                  icon: UserGroupIcon,
+                  icon: EyeIcon,
                   color: "blue"
                 },
                 {
