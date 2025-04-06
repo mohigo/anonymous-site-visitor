@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { CheckIcon, ClipboardIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
+import { submitContactForm } from '@/lib/contact';
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -70,6 +71,15 @@ const tiers = [
 export default function GetStartedPage() {
   const [copied, setCopied] = useState(false);
   const [hoveredTier, setHoveredTier] = useState<string | null>(null);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: 'Business Plan Inquiry',
+    message: 'I would like to learn more about the Business plan.',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   const codeSnippet = `<script src="https://cdn.fusionleap.dev/tracker.js"></script>
 
@@ -91,6 +101,41 @@ export default function GetStartedPage() {
     } catch (err) {
       console.error('Failed to copy code:', err);
     }
+  };
+
+  const handleContactSales = async () => {
+    setShowContactForm(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    const result = await submitContactForm({
+      ...formData,
+      source: 'contact_sales'
+    });
+
+    if (result.success) {
+      setSubmitStatus('success');
+      setFormData({
+        name: '',
+        email: '',
+        subject: 'Business Plan Inquiry',
+        message: 'I would like to learn more about the Business plan.',
+      });
+      setShowContactForm(false);
+    } else {
+      setSubmitStatus('error');
+    }
+    setIsSubmitting(false);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      [e.target.name]: e.target.value
+    }));
   };
 
   return (
@@ -197,6 +242,33 @@ export default function GetStartedPage() {
                   >
                     {tier.cta}
                   </motion.a>
+
+                  {tier.name === 'Business' ? (
+                    <button
+                      onClick={handleContactSales}
+                      className={`block w-full py-3 px-6 text-center rounded-lg shadow-lg font-semibold transition-all duration-200 ${
+                        hoveredTier === 'business'
+                          ? 'bg-blue-700 text-white shadow-blue-500/30'
+                          : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-blue-500/30'
+                      }`}
+                    >
+                      Contact Sales
+                    </button>
+                  ) : (
+                    <motion.a
+                      href={tier.href}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className={`mt-8 block w-full rounded-md px-3 py-2 text-center text-sm font-semibold leading-6 
+                        focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 transition-all duration-200
+                        ${tier.mostPopular
+                          ? 'bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600 shadow-lg shadow-indigo-500/50'
+                          : 'bg-white text-blue-600 hover:bg-blue-50 focus-visible:outline-white'
+                        }`}
+                    >
+                      {tier.cta}
+                    </motion.a>
+                  )}
                 </motion.div>
               ))}
             </motion.div>
@@ -299,6 +371,91 @@ export default function GetStartedPage() {
               ))}
             </dl>
           </motion.div>
+
+          {/* Contact Form Modal */}
+          {showContactForm && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+                <h3 className="text-2xl font-bold mb-6">Contact Sales</h3>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                      className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      placeholder="Your name"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      required
+                      className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                      placeholder="your@email.com"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="message" className="block text-sm font-medium text-gray-700">
+                      Message
+                    </label>
+                    <textarea
+                      id="message"
+                      name="message"
+                      value={formData.message}
+                      onChange={handleChange}
+                      required
+                      rows={4}
+                      className="mt-1 block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors resize-none"
+                    />
+                  </div>
+
+                  <div className="flex gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowContactForm(false)}
+                      className="flex-1 px-6 py-3 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className={`flex-1 px-6 py-3 rounded-lg font-semibold text-white transition-all duration-200 ${
+                        isSubmitting
+                          ? 'bg-blue-400 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-500/30'
+                      }`}
+                    >
+                      {isSubmitting ? 'Sending...' : 'Send Message'}
+                    </button>
+                  </div>
+
+                  {submitStatus === 'success' && (
+                    <p className="text-green-600 text-center">Thank you! We'll be in touch soon.</p>
+                  )}
+                  {submitStatus === 'error' && (
+                    <p className="text-red-600 text-center">Something went wrong. Please try again.</p>
+                  )}
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
