@@ -2,7 +2,6 @@
   "github": {
     "silent": true
   },
-  "analytics": false,
   "speedInsights": {
     "enabled": false
   },
