@@ -4,15 +4,14 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your Mongo URI to .env');
-}
-
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/visitor-analytics';
 const options = {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,
-  family: 4 // Force IPv4
+  family: 4, // Force IPv4
+  connectTimeoutMS: 10000,
+  retryWrites: true,
+  retryReads: true
 };
 
 let client: MongoClient;
@@ -27,13 +26,19 @@ if (process.env.NODE_ENV === 'development') {
 
   if (!globalWithMongo._mongoClientPromise) {
     client = new MongoClient(uri, options);
-    globalWithMongo._mongoClientPromise = client.connect();
+    globalWithMongo._mongoClientPromise = client.connect().catch(err => {
+      console.error('Failed to connect to MongoDB:', err);
+      throw err;
+    });
   }
   clientPromise = globalWithMongo._mongoClientPromise;
 } else {
   // In production mode, it's best to not use a global variable.
   client = new MongoClient(uri, options);
-  clientPromise = client.connect();
+  clientPromise = client.connect().catch(err => {
+    console.error('Failed to connect to MongoDB:', err);
+    throw err;
+  });
 }
 
 // Export a module-scoped MongoClient promise. By doing this in a
