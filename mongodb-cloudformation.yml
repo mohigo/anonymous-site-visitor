@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'MongoDB Free Tier Setup'
+
+Parameters:
+  DBInstanceClass:
+    Type: String
+    Default: db.t3.micro
+    Description: 'The instance class for the MongoDB instance'
+    AllowedValues:
+      - db.t3.micro
+      - db.t3.small
+    ConstraintDescription: 'Must be a valid instance class'
+
+Resources:
+  MongoDBInstance:
+    Type: AWS::DocDB::DBInstance
+    Properties:
+      DBInstanceClass: !Ref DBInstanceClass
+      DBClusterIdentifier: !Ref MongoDBCluster
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Engine: docdb
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+
+  MongoDBCluster:
+    Type: AWS::DocDB::DBCluster
+    Properties:
+      MasterUsername: !Ref MasterUsername
+      MasterUserPassword: !Ref MasterUserPassword
+      Engine: docdb
+      EngineVersion: '4.0.0'
+      DBClusterParameterGroupName: !Ref DBClusterParameterGroup
+      VpcSecurityGroupIds:
+        - !Ref SecurityGroup
+      StorageEncrypted: true
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'Security group for MongoDB'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 27017
+          ToPort: 27017
+          CidrIp: 0.0.0.0/0
+
+  DBClusterParameterGroup:
+    Type: AWS::DocDB::DBClusterParameterGroup
+    Properties:
+      Description: 'Custom parameter group for MongoDB'
+      Family: docdb4.0
+      Parameters:
+        tls: 'disabled'
+
+Outputs:
+  MongoDBEndpoint:
+    Description: 'MongoDB Connection Endpoint'
+    Value: !GetAtt MongoDBCluster.Endpoint
+  MongoDBPort:
+    Description: 'MongoDB Port'
+    Value: !GetAtt MongoDBCluster.Port 
