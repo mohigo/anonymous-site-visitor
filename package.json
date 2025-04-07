@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node server.js",
+    "dev": "node -r dotenv/config server.js",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
@@ -27,6 +27,7 @@
     "@types/node": "^20.17.30",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19",
+    "dotenv": "^16.4.7",
     "eslint": "^9",
     "eslint-config-next": "15.2.4",
     "sharp": "^0.34.0",

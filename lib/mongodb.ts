@@ -1,11 +1,19 @@
 import { MongoClient } from 'mongodb';
+import dotenv from 'dotenv';
+
+// Load environment variables
+dotenv.config();
 
 if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your Mongo URI to .env.local');
+  throw new Error('Please add your Mongo URI to .env');
 }
 
 const uri = process.env.MONGODB_URI;
-const options = {};
+const options = {
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  family: 4 // Force IPv4
+};
 
 let client: MongoClient;
 let clientPromise: Promise<MongoClient>;
