@@ -15,6 +15,13 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Enable output file tracing for better production builds
+  output: 'standalone',
+  // Optimize images for production
+  images: {
+    domains: [],
+    formats: ['image/avif', 'image/webp'],
+  },
   webpack: (config, { isServer }) => {
     // Exclude problematic modules from webpack processing
     config.externals = [...(config.externals || []), '@mapbox/node-pre-gyp'];
@@ -44,6 +51,22 @@ const nextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains'
           },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
+          },
+          {
+            key: 'Referrer-Policy',
+            value: 'strict-origin-when-cross-origin'
+          }
         ],
       },
     ];
