@@ -8,6 +8,7 @@ export default function VisitorProfile() {
   const [visitorData, setVisitorData] = useState<VisitorData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
 
   const fetchVisitorData = async () => {
     try {
@@ -16,17 +17,28 @@ export default function VisitorProfile() {
       const currentVisitor = storedData ? JSON.parse(storedData) : null;
       
       if (!currentVisitor?.visitorId) {
-        // If no visitor data, wait for it to be initialized
+        // If no visitor data, this is a first-time user
         setLoading(false);
         setVisitorData(null);
+        setIsFirstTimeUser(true);
         return;
       }
 
       // Always fetch fresh data from server
       const response = await fetch(`/api/visitor?id=${currentVisitor.visitorId}`);
+      
+      if (response.status === 404) {
+        // Visitor ID exists in localStorage but not in database yet
+        setIsFirstTimeUser(true);
+        setVisitorData(null);
+        setError(null);
+        return;
+      }
+      
       if (!response.ok) {
         throw new Error('Failed to fetch visitor data');
       }
+      
       const data = await response.json();
       
       if (!data || data.error) {
@@ -34,10 +46,14 @@ export default function VisitorProfile() {
       }
 
       setVisitorData(data);
+      setIsFirstTimeUser(false);
       setError(null);
     } catch (err) {
       console.error('Error fetching visitor data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load visitor data');
+      // Only set error if not a first-time user scenario
+      if (!isFirstTimeUser) {
+        setError(err instanceof Error ? err.message : 'Failed to load visitor data');
+      }
       setVisitorData(null);
     } finally {
       setLoading(false);
@@ -66,7 +82,7 @@ export default function VisitorProfile() {
     );
   }
 
-  if (!visitorData && !error) {
+  if (isFirstTimeUser || (!visitorData && !error)) {
     return (
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Visitor Profile</h2>
