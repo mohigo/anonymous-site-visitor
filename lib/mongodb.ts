@@ -4,7 +4,12 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/visitor-analytics';
+// Get MongoDB URI from environment variable
+const uri = process.env.MONGODB_URI;
+if (!uri) {
+  throw new Error('MONGODB_URI environment variable is not set');
+}
+
 const options = {
   serverSelectionTimeoutMS: 5000,
   socketTimeoutMS: 45000,

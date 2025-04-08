@@ -1,16 +1,32 @@
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 
-if (!process.env.MONGODB_URI) {
-  throw new Error('Please add your Mongo URI to .env.local');
-}
+// Load environment variables
+dotenv.config();
 
+// Get MongoDB URI from environment variable
 const MONGODB_URI = process.env.MONGODB_URI;
-
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI environment variable is not set');
 }
+
+// Define the type for the cached connection
+interface MongooseCache {
+  conn: typeof mongoose | null;
+  promise: Promise<typeof mongoose> | null;
+}
+
+// Extend the global type to include mongoose
+declare global {
+  var mongoose: MongooseCache;
+}
+
+// Initialize the cache
+if (!global.mongoose) {
+  global.mongoose = { conn: null, promise: null };
+}
+
+const cached = global.mongoose;
 
 export async function connectToDatabase() {
   if (cached.conn) {
