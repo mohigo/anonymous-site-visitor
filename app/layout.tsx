@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Fusion Leap - Privacy-First Analytics",
+  title: "VizLens - Advanced Visitor Identification",
   description: "Privacy-focused visitor analytics that respects user preferences and data protection",
   icons: {
     icon: [
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   other: {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "default",
-    "apple-mobile-web-app-title": "Fusion Leap Analytics",
+    "apple-mobile-web-app-title": "VizLens Analytics",
     "format-detection": "telephone=no",
     "mobile-web-app-capable": "yes",
     // Privacy-related meta tags
@@ -43,8 +43,8 @@ export const viewport: Viewport = {
   themeColor: "#2563EB",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
 };
 
 export default function RootLayout({
