@@ -11,10 +11,10 @@ if (!uri) {
 }
 
 const options = {
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 30000,
   socketTimeoutMS: 45000,
   family: 4, // Force IPv4
-  connectTimeoutMS: 10000,
+  connectTimeoutMS: 30000,
   retryWrites: true,
   retryReads: true
 };
