@@ -244,7 +244,7 @@ export default function Contact() {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Email</p>
-                      <p className="text-gray-900">contact@fusionleap.digital</p>
+                      <p className="text-gray-900">contact@vizlens.net</p>
                     </div>
                   </div>
 

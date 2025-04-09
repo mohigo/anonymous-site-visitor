@@ -81,7 +81,7 @@ export default function GetStartedPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  const codeSnippet = `<script src="https://cdn.fusionleap.dev/tracker.js"></script>
+  const codeSnippet = `<script src="https://cdn.vizlens.net/tracker.js"></script>
 
 <script>
   FusionLeap.init({
@@ -156,7 +156,7 @@ export default function GetStartedPage() {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-4xl font-bold tracking-tight sm:text-6xl bg-clip-text text-transparent bg-gradient-to-r from-white to-blue-200">
-              Get Started with FusionLeap
+              Get Started with VizLens
             </h1>
             <p className="mt-6 text-lg leading-8 mx-auto max-w-2xl text-blue-100">
               Choose the perfect plan for your needs and start tracking visitors anonymously today
