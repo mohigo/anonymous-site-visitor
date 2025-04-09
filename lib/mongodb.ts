@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Get MongoDB URI from environment variable
-const uri = process.env.MONGODB_URI;
+const uri = process.env.MONGODB_URI + '?directConnection=true';
 if (!uri) {
   throw new Error('MONGODB_URI environment variable is not set');
 }
