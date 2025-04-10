@@ -1,4 +1,4 @@
-import { connectToDatabase } from '../../../lib/mongodb';
+import { connectToDatabase } from '../../../lib/db';
 
 export default async function handler(req, res) {
   // Only allow POST requests
@@ -8,7 +8,8 @@ export default async function handler(req, res) {
 
   try {
     // Get the database connection
-    const { db } = await connectToDatabase();
+    const mongoose = await connectToDatabase();
+    const db = mongoose.connection.db;
 
     // Get the data from the request body
     const data = req.body;
