@@ -49,6 +49,9 @@
       data.eventName = eventName;
       data.eventData = eventData || {};
       
+      // Add a custom event type flag to distinguish from automatic click tracking
+      data.isCustomEvent = true;
+      
       this._sendData('event', data);
     },
     
@@ -98,9 +101,23 @@
     },
     
     _setupClickTracking: function() {
+      // Create a flag to prevent double-tracking
+      this.isTrackingCustomEvent = false;
+      
       document.addEventListener('click', (event) => {
+        // Skip if we're currently processing a custom event
+        if (this.isTrackingCustomEvent) {
+          this.isTrackingCustomEvent = false;
+          return;
+        }
+        
         const target = event.target.closest('a, button, [role="button"]');
         if (!target) return;
+        
+        // Don't track test buttons from our test page
+        if (target.id && target.id.startsWith('test-')) {
+          return;
+        }
         
         const data = {
           elementType: target.tagName.toLowerCase(),

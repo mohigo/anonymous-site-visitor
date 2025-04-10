@@ -330,7 +330,7 @@
         });
         
         document.getElementById('test-ecommerce').addEventListener('click', function() {
-          VizLens.trackEvent('purchase', {
+          const eventData = {
             orderId: 'TEST-' + Math.floor(Math.random() * 10000),
             currency: 'USD',
             revenue: 99.99,
@@ -345,8 +345,10 @@
               }
             ],
             timestamp: new Date().toISOString()
-          });
-          logToUI('E-commerce purchase event tracked');
+          };
+          
+          VizLens.trackEvent('purchase', eventData);
+          logToUI('E-commerce purchase event tracked: ' + JSON.stringify(eventData).substring(0, 100) + '...');
         });
       }
       
