@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VizLens Telemetry Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #2563eb;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    .events-log {
+      border: 1px solid #ddd;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 20px;
+      height: 300px;
+      overflow-y: auto;
+      background-color: #f8f9fa;
+    }
+    .log-entry {
+      margin-bottom: 8px;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    .log-entry:nth-child(odd) {
+      background-color: #eef2ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>VizLens Telemetry Test Page</h1>
+  
+  <p>
+    This page tests the functionality of the VizLens telemetry script.
+    Open your browser console to see detailed tracking information.
+  </p>
+
+  <div>
+    <h2>Test Custom Events</h2>
+    <button id="btn-click">Track Button Click</button>
+    <button id="btn-signup">Track Signup</button>
+    <button id="btn-purchase">Track Purchase</button>
+    <button id="btn-error">Track Error</button>
+  </div>
+
+  <div>
+    <h2>Test Navigation</h2>
+    <button id="btn-nav">Navigate to Another Page</button>
+    <a href="#section1" id="link-section">Go to Section 1</a>
+  </div>
+
+  <div class="events-log" id="events-log">
+    <h3>Events Log:</h3>
+  </div>
+
+  <div id="section1" style="margin-top: 50px;">
+    <h2>Section 1</h2>
+    <p>This is a test section to verify link tracking.</p>
+  </div>
+
+  <!-- Load the telemetry script -->
+  <script src="/telemetry.js"></script>
+  
+  <script>
+    // Initialize the tracker with test site ID
+    VizLens.init({
+      siteId: 'test-site-123',
+      options: {
+        privacy: true,
+        analytics: true,
+        trackClicks: true
+      }
+    });
+
+    // Log to page function
+    function logToPage(message) {
+      const eventsLog = document.getElementById('events-log');
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry';
+      logEntry.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+      eventsLog.appendChild(logEntry);
+      eventsLog.scrollTop = eventsLog.scrollHeight;
+    }
+
+    // Intercept and log tracking calls
+    const originalSendData = VizLens._sendData;
+    VizLens._sendData = function(eventType, data) {
+      logToPage(`Tracking ${eventType}: ${JSON.stringify(data.eventName || 'pageview')}`);
+      console.log(`Tracking ${eventType}:`, data);
+      
+      // Send actual API calls during testing
+      originalSendData.call(this, eventType, data);
+      
+      // Log the endpoint being called
+      console.log(`Data sent to ${this.baseUrl}/${eventType}`);
+    };
+
+    // Set up event listeners for test buttons
+    document.getElementById('btn-click').addEventListener('click', function() {
+      VizLens.trackEvent('button_click', { buttonId: 'btn-click', buttonName: 'Track Button Click' });
+    });
+
+    document.getElementById('btn-signup').addEventListener('click', function() {
+      VizLens.trackEvent('signup', { plan: 'free' });
+    });
+
+    document.getElementById('btn-purchase').addEventListener('click', function() {
+      VizLens.trackEvent('purchase', { 
+        product: 'Pro Plan', 
+        price: 99,
+        currency: 'USD'
+      });
+    });
+
+    document.getElementById('btn-error').addEventListener('click', function() {
+      VizLens.trackEvent('error', { 
+        message: 'Test error message',
+        code: 'TEST_ERROR_001'
+      });
+    });
+
+    document.getElementById('btn-nav').addEventListener('click', function() {
+      window.location.search = '?page=test&t=' + Date.now();
+    });
+
+    // Log initial page view
+    logToPage('Page loaded - initial pageview tracked');
+  </script>
+</body>
+</html> 

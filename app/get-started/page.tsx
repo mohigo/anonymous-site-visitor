@@ -84,11 +84,12 @@ export default function GetStartedPage() {
   const codeSnippet = `<script src="https://cdn.vizlens.net/tracker.js"></script>
 
 <script>
-  FusionLeap.init({
+  VizLens.init({
     siteId: 'YOUR_SITE_ID',
     options: {
       privacy: true,
-      analytics: true
+      analytics: true,
+      trackClicks: true
     }
   });
 </script>`;
