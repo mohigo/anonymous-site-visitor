@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VizLens Production Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      color: #2563eb;
+      margin-bottom: 30px;
+    }
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .card h2 {
+      margin-top: 0;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 10px;
+      font-size: 18px;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 8px;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    code {
+      background-color: #f1f5f9;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 90%;
+    }
+    .tag {
+      background-color: #e0f2fe;
+      color: #0369a1;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .success {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+    .error {
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+    .logs {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      height: 200px;
+      overflow-y: auto;
+      padding: 8px 12px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .log-entry {
+      margin-bottom: 4px;
+      padding: 4px;
+      border-radius: 2px;
+    }
+    .log-entry:nth-child(odd) {
+      background-color: rgba(0,0,0,0.02);
+    }
+    .timestamp {
+      color: #64748b;
+      font-size: 11px;
+      margin-right: 6px;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>VizLens Production Telemetry Test</h1>
+  <p>This page allows you to test the VizLens telemetry script in the production environment.</p>
+  
+  <div class="card">
+    <h2>Status</h2>
+    <div id="status-container">
+      <p>Script Status: <span id="script-status" class="tag">Checking...</span></p>
+      <p>Site ID: <code id="site-id">N/A</code></p>
+      <p>Visitor ID: <code id="visitor-id">N/A</code></p>
+      <p>Session ID: <code id="session-id">N/A</code></p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Test Actions</h2>
+    <div>
+      <button id="test-pageview">Track New Page View</button>
+      <button id="test-click-event">Track Click Event</button>
+      <button id="test-custom-event">Track Custom Event</button>
+      <button id="test-ecommerce">Track E-commerce Event</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Activity Log</h2>
+    <div class="logs" id="log-container"></div>
+  </div>
+
+  <div class="card hidden" id="config-card">
+    <h2>Manual Configuration</h2>
+    <div>
+      <p>If VizLens failed to load automatically, you can test with a custom site ID:</p>
+      <input type="text" id="manual-site-id" placeholder="Enter site ID" style="padding: 6px; width: 200px;">
+      <button id="manual-init">Initialize</button>
+    </div>
+  </div>
+
+  <!-- Load the production telemetry script -->
+  <script src="https://cdn.vizlens.net/tracker.js"></script>
+  
+  <script>
+    // Function to log messages to the UI
+    function logToUI(message, type = 'info') {
+      const logContainer = document.getElementById('log-container');
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry ${type}`;
+      
+      const timestamp = document.createElement('span');
+      timestamp.className = 'timestamp';
+      timestamp.textContent = new Date().toLocaleTimeString();
+      
+      logEntry.appendChild(timestamp);
+      logEntry.appendChild(document.createTextNode(message));
+      
+      logContainer.appendChild(logEntry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    // Check if VizLens is loaded
+    let vizlensLoaded = typeof VizLens !== 'undefined';
+    
+    function updateStatus() {
+      const scriptStatus = document.getElementById('script-status');
+      const siteIdEl = document.getElementById('site-id');
+      const visitorIdEl = document.getElementById('visitor-id');
+      const sessionIdEl = document.getElementById('session-id');
+      const configCard = document.getElementById('config-card');
+      
+      if (vizlensLoaded) {
+        scriptStatus.textContent = 'Loaded';
+        scriptStatus.className = 'tag success';
+        
+        // Only update these if they exist (after initialization)
+        if (VizLens.siteId) {
+          siteIdEl.textContent = VizLens.siteId;
+        }
+        
+        if (VizLens.visitorId) {
+          visitorIdEl.textContent = VizLens.visitorId;
+        }
+        
+        if (VizLens.sessionId) {
+          sessionIdEl.textContent = VizLens.sessionId;
+        }
+      } else {
+        scriptStatus.textContent = 'Not Loaded';
+        scriptStatus.className = 'tag error';
+        configCard.classList.remove('hidden');
+        logToUI('VizLens script failed to load. Check the console for errors.', 'error');
+      }
+    }
+    
+    // Initialize VizLens with a special test site ID
+    function initVizLens(siteId = 'prod-test-site') {
+      try {
+        VizLens.init({
+          siteId: siteId,
+          options: {
+            privacy: true,
+            analytics: true,
+            trackClicks: true
+          }
+        });
+        
+        vizlensLoaded = true;
+        updateStatus();
+        logToUI(`VizLens initialized with site ID: ${siteId}`, 'success');
+      } catch (err) {
+        logToUI(`Error initializing VizLens: ${err.message}`, 'error');
+        console.error('VizLens initialization error:', err);
+      }
+    }
+    
+    // Set up event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+      // Initial status update
+      updateStatus();
+      
+      if (vizlensLoaded) {
+        // Initialize with test site ID
+        initVizLens();
+        
+        // Set up test buttons
+        document.getElementById('test-pageview').addEventListener('click', function() {
+          // Force a new page view event
+          VizLens.trackPageView();
+          logToUI('Page view event tracked');
+        });
+        
+        document.getElementById('test-click-event').addEventListener('click', function() {
+          VizLens.trackEvent('button_click', {
+            buttonId: 'test-click-event',
+            buttonName: 'Track Click Event',
+            timestamp: new Date().toISOString()
+          });
+          logToUI('Click event tracked');
+        });
+        
+        document.getElementById('test-custom-event').addEventListener('click', function() {
+          VizLens.trackEvent('custom_test_event', {
+            testId: 'test-' + Math.random().toString(36).substring(2, 10),
+            source: 'production-test-page',
+            environment: 'production',
+            timestamp: new Date().toISOString()
+          });
+          logToUI('Custom event tracked');
+        });
+        
+        document.getElementById('test-ecommerce').addEventListener('click', function() {
+          VizLens.trackEvent('purchase', {
+            orderId: 'TEST-' + Math.floor(Math.random() * 10000),
+            currency: 'USD',
+            revenue: 99.99,
+            tax: 8.99,
+            shipping: 4.99,
+            products: [
+              {
+                id: 'PROD-123',
+                name: 'Test Product',
+                price: 99.99,
+                quantity: 1
+              }
+            ],
+            timestamp: new Date().toISOString()
+          });
+          logToUI('E-commerce purchase event tracked');
+        });
+      }
+      
+      // Manual initialization
+      document.getElementById('manual-init').addEventListener('click', function() {
+        const manualSiteId = document.getElementById('manual-site-id').value.trim();
+        if (manualSiteId) {
+          initVizLens(manualSiteId);
+        } else {
+          logToUI('Please enter a site ID', 'error');
+        }
+      });
+    });
+  </script>
+</body>
+</html> 
