@@ -182,26 +182,6 @@
   <script src="/telemetry.js"></script>
   
   <script>
-    // Basic authentication - use a simple approach to avoid hash inconsistencies
-    const correctPassword = "vizlens-admin";
-    
-    document.getElementById('auth-submit').addEventListener('click', function() {
-      const password = document.getElementById('auth-password').value;
-      
-      if (password === correctPassword) {
-        document.getElementById('auth-container').classList.add('hidden');
-      } else {
-        document.getElementById('auth-error').style.display = 'block';
-      }
-    });
-    
-    // Allow Enter key to submit
-    document.getElementById('auth-password').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        document.getElementById('auth-submit').click();
-      }
-    });
-    
     // Function to log messages to the UI
     function logToUI(message, type = 'info') {
       const logContainer = document.getElementById('log-container');
@@ -276,6 +256,46 @@
     
     // Set up event listeners
     document.addEventListener('DOMContentLoaded', function() {
+      console.log("DOM fully loaded");
+      
+      // Authentication setup
+      const authSubmit = document.getElementById('auth-submit');
+      const authPassword = document.getElementById('auth-password');
+      const authError = document.getElementById('auth-error');
+      const authContainer = document.getElementById('auth-container');
+      
+      // Basic authentication - use a simple approach to avoid hash inconsistencies
+      const correctPassword = "vizlens-admin";
+      
+      function authenticateUser() {
+        console.log("Auth function called");
+        const password = authPassword.value;
+        console.log("Password entered:", password);
+        
+        if (password === correctPassword) {
+          console.log("Password correct, hiding auth container");
+          authContainer.style.display = "none";
+        } else {
+          console.log("Password incorrect");
+          authError.style.display = 'block';
+        }
+      }
+      
+      if (authSubmit) {
+        console.log("Auth submit button found, adding event listener");
+        authSubmit.addEventListener('click', authenticateUser);
+      } else {
+        console.error("Auth submit button not found!");
+      }
+      
+      if (authPassword) {
+        authPassword.addEventListener('keypress', function(e) {
+          if (e.key === 'Enter') {
+            authenticateUser();
+          }
+        });
+      }
+      
       // Initial status update
       updateStatus();
       
