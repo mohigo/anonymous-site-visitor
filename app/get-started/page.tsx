@@ -81,7 +81,7 @@ export default function GetStartedPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  const codeSnippet = `<script src="https://vizlens.net/tracker.js"></script>
+  const codeSnippet = `<script src="https://vizlens.net/telemetry.js"></script>
 
 <script>
   VizLens.init({
