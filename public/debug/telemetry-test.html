@@ -182,27 +182,13 @@
   <script src="/telemetry.js"></script>
   
   <script>
-    // Basic authentication 
-    // The hash below is for password "vizlens-admin" - change this to your preferred password
-    const correctPasswordHash = "23e7d9abe93cfc2e2caaa887a7f95195";
-    
-    function hashPassword(password) {
-      // This is a simple hash function for demo purposes
-      // In production, use a more secure method
-      let hash = 0;
-      for (let i = 0; i < password.length; i++) {
-        const char = password.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
-      }
-      return hash.toString(16);
-    }
+    // Basic authentication - use a simple approach to avoid hash inconsistencies
+    const correctPassword = "vizlens-admin";
     
     document.getElementById('auth-submit').addEventListener('click', function() {
       const password = document.getElementById('auth-password').value;
-      const passwordHash = hashPassword(password);
       
-      if (passwordHash === correctPasswordHash) {
+      if (password === correctPassword) {
         document.getElementById('auth-container').classList.add('hidden');
       } else {
         document.getElementById('auth-error').style.display = 'block';
