@@ -67,7 +67,7 @@
     },
     
     _sendData: function(eventType, data) {
-      const endpoint = `${this.baseUrl}/${eventType}`;
+      const endpoint = `${this.baseUrl}/telemetry/${eventType}`;
       
       // Add privacy controls based on options
       if (this.options.privacy === true) {
