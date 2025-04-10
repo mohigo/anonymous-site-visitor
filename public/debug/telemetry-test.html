@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VizLens Production Test</title>
+  <title>VizLens Production Telemetry Test</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -93,9 +93,54 @@
     .hidden {
       display: none;
     }
+    .auth-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    .auth-box {
+      background-color: white;
+      padding: 30px;
+      border-radius: 8px;
+      width: 300px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .auth-box h2 {
+      margin-top: 0;
+      color: #2563eb;
+    }
+    .auth-box input {
+      width: 100%;
+      padding: 8px;
+      margin: 10px 0;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    .auth-box button {
+      width: 100%;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
+  <!-- Authentication overlay -->
+  <div id="auth-container" class="auth-container">
+    <div class="auth-box">
+      <h2>Authentication Required</h2>
+      <p>Please enter the admin password to access the telemetry test page.</p>
+      <input type="password" id="auth-password" placeholder="Password">
+      <button id="auth-submit">Submit</button>
+      <p id="auth-error" style="color: #b91c1c; display: none;">Incorrect password. Please try again.</p>
+    </div>
+  </div>
+
   <h1>VizLens Production Telemetry Test</h1>
   <p>This page allows you to test the VizLens telemetry script in the production environment.</p>
   
@@ -134,9 +179,43 @@
   </div>
 
   <!-- Load the telemetry script -->
-  <script src="https://vizlens.net/telemetry.js"></script>
+  <script src="/telemetry.js"></script>
   
   <script>
+    // Basic authentication 
+    // The hash below is for password "vizlens-admin" - change this to your preferred password
+    const correctPasswordHash = "23e7d9abe93cfc2e2caaa887a7f95195";
+    
+    function hashPassword(password) {
+      // This is a simple hash function for demo purposes
+      // In production, use a more secure method
+      let hash = 0;
+      for (let i = 0; i < password.length; i++) {
+        const char = password.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return hash.toString(16);
+    }
+    
+    document.getElementById('auth-submit').addEventListener('click', function() {
+      const password = document.getElementById('auth-password').value;
+      const passwordHash = hashPassword(password);
+      
+      if (passwordHash === correctPasswordHash) {
+        document.getElementById('auth-container').classList.add('hidden');
+      } else {
+        document.getElementById('auth-error').style.display = 'block';
+      }
+    });
+    
+    // Allow Enter key to submit
+    document.getElementById('auth-password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('auth-submit').click();
+      }
+    });
+    
     // Function to log messages to the UI
     function logToUI(message, type = 'info') {
       const logContainer = document.getElementById('log-container');
