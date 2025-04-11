@@ -1,24 +1,25 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '../../../../lib/mongodb';
 
-// Define the allowed origins
-const allowedOrigins = '*'; // Allow all origins - change this in production to specific domains
+// CORS headers helper function that accepts the request to get the origin
+function corsHeaders(req: Request) {
+  // Get the origin from the request headers
+  const origin = req.headers.get('origin') || '';
 
-// CORS headers helper
-function corsHeaders() {
   return {
-    'Access-Control-Allow-Origin': allowedOrigins,
+    'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+    'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400', // 24 hours
   };
 }
 
 // Handle OPTIONS requests (CORS preflight)
-export async function OPTIONS() {
+export async function OPTIONS(req: Request) {
   return new NextResponse(null, {
     status: 200,
-    headers: corsHeaders(),
+    headers: corsHeaders(req),
   });
 }
 
@@ -36,14 +37,14 @@ async function processTelemetry(req: Request, type: string) {
     if (!data.siteId) {
       return NextResponse.json(
         { error: 'siteId is required' },
-        { status: 400, headers: corsHeaders() }
+        { status: 400, headers: corsHeaders(req) }
       );
     }
 
     if (type === 'event' && !data.eventName) {
       return NextResponse.json(
         { error: 'eventName is required for event tracking' },
-        { status: 400, headers: corsHeaders() }
+        { status: 400, headers: corsHeaders(req) }
       );
     }
 
@@ -89,13 +90,13 @@ async function processTelemetry(req: Request, type: string) {
     // Return success
     return NextResponse.json(
       { success: true },
-      { status: 200, headers: corsHeaders() }
+      { status: 200, headers: corsHeaders(req) }
     );
   } catch (error) {
     console.error(`Error processing ${type}:`, error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500, headers: corsHeaders() }
+      { status: 500, headers: corsHeaders(req) }
     );
   }
 }
@@ -111,7 +112,7 @@ export async function POST(
   if (type !== 'pageview' && type !== 'event') {
     return NextResponse.json(
       { error: 'Invalid telemetry type' },
-      { status: 400, headers: corsHeaders() }
+      { status: 400, headers: corsHeaders(req) }
     );
   }
   

@@ -110,7 +110,8 @@
         keepalive: true,
         // Add CORS mode explicitly
         mode: 'cors',
-        credentials: 'omit'
+        // Allow credentials to be sent with the request if not explicitly disabled
+        credentials: this.options.disableCredentials ? 'omit' : 'include'
       }).catch(error => {
         console.error('VizLens: Error sending data:', error);
       });
