@@ -1,6 +1,12 @@
 import { connectToDatabase } from '../../../lib/db';
+import { cors } from '../../../lib/cors';
 
 export default async function handler(req, res) {
+  // Handle CORS
+  if (cors(req, res)) {
+    return; // Return early if this was a preflight request
+  }
+
   // Only allow POST requests
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });

@@ -167,7 +167,38 @@ export default function Home() {
                 key={feature.title}
                 variants={fadeInUp}
                 className="group relative bg-gradient-to-b from-white to-gray-50/50 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100"
+                style={{ cursor: feature.title === "Accurate Identification" || feature.title === "Privacy-First" || feature.title === "Real-time Analytics" || feature.title === "Bot Detection" ? "pointer" : "default" }}
               >
+                {feature.title === "Accurate Identification" ? (
+                  <Link href="/privacy#machine-learning-fingerprinting" className="absolute inset-0 z-10" aria-label="Learn more about Machine Learning Fingerprinting" />
+                ) : feature.title === "Privacy-First" ? (
+                  <Link href="/privacy#privacy-first-approach" className="absolute inset-0 z-10" aria-label="Learn more about our Privacy-First Approach" />
+                ) : feature.title === "Real-time Analytics" ? (
+                  <Link href="/analytics" className="absolute inset-0 z-10" aria-label="View Real-time Analytics" />
+                ) : feature.title === "Bot Detection" ? (
+                  <Link
+                    href="/analytics#anomaly-detection"
+                    className="absolute inset-0 z-10"
+                    aria-label="View Bot Detection in Analytics"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      // Navigate programmatically with a small delay to ensure DOM is ready
+                      window.location.href = "/analytics#anomaly-detection";
+                      
+                      // For users already on the analytics page
+                      const isAlreadyOnAnalyticsPage = window.location.pathname.includes('/analytics');
+                      if (isAlreadyOnAnalyticsPage) {
+                        e.preventDefault();
+                        const element = document.getElementById('anomaly-detection');
+                        if (element) {
+                          setTimeout(() => {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 100);
+                        }
+                      }
+                    }}
+                  />
+                ) : null}
                 <div className="flex justify-center mb-6 relative">
                   {/* Gradient background blur effect */}
                   <div className={`absolute inset-0 bg-gradient-to-r ${feature.gradient} opacity-20 group-hover:opacity-30 blur-2xl transition-all duration-300 rounded-full`} />

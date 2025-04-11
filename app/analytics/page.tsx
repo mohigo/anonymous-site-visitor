@@ -24,7 +24,9 @@ import {
   ArrowPathIcon,
   ExclamationTriangleIcon,
   UsersIcon,
-  ChartPieIcon
+  ChartPieIcon,
+  ShieldExclamationIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { ClockIcon } from '@heroicons/react/24/solid';
 
@@ -107,6 +109,69 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Handle responsive design for mobile devices
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    // Initial check
+    checkIfMobile();
+    
+    // Add event listener for window resizing
+    window.addEventListener('resize', checkIfMobile);
+    
+    // Cleanup
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
+
+  // Handle viewing all visitors
+  const handleViewAllVisitors = () => {
+    // This is a placeholder - in a real app, you might:
+    // 1. Open a modal with more visitors
+    // 2. Navigate to a dedicated visitors page
+    // 3. Load more visitors in-place
+    console.log('View all visitors clicked');
+    // For demonstration purposes only
+    alert('This would show all visitors in a full page or modal view');
+  };
+
+  // Handle anchor link scrolling
+  useEffect(() => {
+    // Check if there's a hash in the URL (e.g., #anomaly-detection)
+    if (typeof window !== 'undefined') {
+      const scrollToHash = () => {
+        const hash = window.location.hash;
+        if (hash) {
+          const id = hash.substring(1); // Remove the # character
+          const element = document.getElementById(id);
+          
+          if (element) {
+            // Ensure the element exists before scrolling
+            setTimeout(() => {
+              const topOffset = element.getBoundingClientRect().top + window.pageYOffset - 100;
+              window.scrollTo({
+                top: topOffset,
+                behavior: 'smooth'
+              });
+            }, 300);
+          }
+        }
+      };
+      
+      // Initial scroll when component mounts
+      scrollToHash();
+      
+      // Also add event listener for hash changes
+      window.addEventListener('hashchange', scrollToHash);
+      
+      return () => {
+        window.removeEventListener('hashchange', scrollToHash);
+      };
+    }
+  }, []);
 
   // Format visitor IDs for better readability
   const formatVisitorId = (id: string): string => {
@@ -362,7 +427,7 @@ export default function AnalyticsPage() {
             {/* Browser Distribution */}
             <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Browser Distribution</h2>
-              <div className="h-80">
+              <div className="h-96 md:h-96 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <defs>
@@ -379,8 +444,8 @@ export default function AnalyticsPage() {
                       nameKey="browser"
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
+                      innerRadius={isMobile ? 40 : 60}
+                      outerRadius={isMobile ? 60 : 80}
                       paddingAngle={5}
                       label={({
                         cx,
@@ -392,9 +457,41 @@ export default function AnalyticsPage() {
                         index
                       }) => {
                         const RADIAN = Math.PI / 180;
-                        const radius = 25 + innerRadius + (outerRadius - innerRadius);
+                        // Adjust radius based on device size
+                        const radius = isMobile ? 
+                          30 + innerRadius + (outerRadius - innerRadius) : 
+                          25 + innerRadius + (outerRadius - innerRadius);
                         const x = cx + radius * Math.cos(-midAngle * RADIAN);
                         const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                        
+                        const browser = data.topBrowsers[index].browser;
+                        
+                        // For mobile devices, use abbreviated labels if needed
+                        if (isMobile) {
+                          // Keep browser names shorter on mobile
+                          let shortLabel = browser;
+                          // Handle specific browser names for better display
+                          if (browser === "Chrome Mobile") shortLabel = "Chrome";
+                          else if (browser === "Mobile Safari") shortLabel = "Safari";
+                          else if (browser === "Samsung Internet") shortLabel = "Samsung";
+                          else if (browser === "Firefox Mobile") shortLabel = "Firefox";
+                          else if (browser.includes(" ")) shortLabel = browser.split(" ")[0];
+                          
+                          return (
+                            <text
+                              x={x}
+                              y={y}
+                              fill="#374151"
+                              textAnchor={x > cx ? "start" : "end"}
+                              dominantBaseline="central"
+                              className="text-xs"
+                              style={{ fontWeight: 500 }}
+                            >
+                              {`${shortLabel} (${value})`}
+                            </text>
+                          );
+                        }
+                        
                         return (
                           <text
                             x={x}
@@ -403,8 +500,9 @@ export default function AnalyticsPage() {
                             textAnchor={x > cx ? "start" : "end"}
                             dominantBaseline="central"
                             className="text-xs"
+                            style={{ fontWeight: 500 }}
                           >
-                            {data.topBrowsers[index].browser} ({value})
+                            {`${browser} (${value})`}
                           </text>
                         );
                       }}
@@ -429,7 +527,7 @@ export default function AnalyticsPage() {
           <motion.section variants={fadeIn} className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
             <div className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
               <h2 className="text-xl font-semibold text-gray-900 mb-6">Country Distribution</h2>
-              <div className="h-80">
+              <div className="h-96 md:h-96 sm:h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <defs>
@@ -446,8 +544,8 @@ export default function AnalyticsPage() {
                       nameKey="country"
                       cx="50%"
                       cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
+                      innerRadius={isMobile ? 40 : 60}
+                      outerRadius={isMobile ? 60 : 80}
                       paddingAngle={5}
                       label={({
                         cx,
@@ -459,9 +557,171 @@ export default function AnalyticsPage() {
                         index
                       }) => {
                         const RADIAN = Math.PI / 180;
-                        const radius = 25 + innerRadius + (outerRadius - innerRadius);
+                        
+                        // Adjust radius based on device size
+                        const radius = isMobile ? 
+                          30 + innerRadius + (outerRadius - innerRadius) : 
+                          45 + innerRadius + (outerRadius - innerRadius);
+                          
                         const x = cx + radius * Math.cos(-midAngle * RADIAN);
                         const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                        
+                        const country = data.topCountries[index].country;
+                        
+                        // For mobile devices, use abbreviated labels
+                        if (isMobile) {
+                          // Special handling for countries with "United" prefix
+                          if (country === "United Arab" || country === "United Arab Emirates") {
+                            return (
+                              <g>
+                                <text
+                                  x={x}
+                                  y={y}
+                                  fill="#374151"
+                                  textAnchor={x > cx ? "start" : "end"}
+                                  dominantBaseline="central"
+                                  className="text-xs"
+                                  style={{ fontWeight: 500 }}
+                                >
+                                  UAE ({value})
+                                </text>
+                              </g>
+                            );
+                          } else if (country === "United States") {
+                            return (
+                              <text
+                                x={x}
+                                y={y}
+                                fill="#374151"
+                                textAnchor={x > cx ? "start" : "end"}
+                                dominantBaseline="central"
+                                className="text-xs"
+                                style={{ fontWeight: 500 }}
+                              >
+                                USA ({value})
+                              </text>
+                            );
+                          } else if (country === "United Kingdom") {
+                            return (
+                              <text
+                                x={x}
+                                y={y}
+                                fill="#374151"
+                                textAnchor={x > cx ? "start" : "end"}
+                                dominantBaseline="central"
+                                className="text-xs"
+                                style={{ fontWeight: 500 }}
+                              >
+                                UK ({value})
+                              </text>
+                            );
+                          } else if (country === "United") {
+                            // Default for any other "United" that might appear
+                            return (
+                              <text
+                                x={x}
+                                y={y}
+                                fill="#374151"
+                                textAnchor={x > cx ? "start" : "end"}
+                                dominantBaseline="central"
+                                className="text-xs"
+                                style={{ fontWeight: 500 }}
+                              >
+                                United ({value})
+                              </text>
+                            );
+                          }
+                          
+                          // Abbreviate other country names for mobile
+                          let shortLabel = country;
+                          if (country.length > 8) {
+                            // Use common abbreviations or first word
+                            if (country.includes(" ")) shortLabel = country.split(" ")[0];
+                            else shortLabel = country.substring(0, 8);
+                          }
+                          
+                          return (
+                            <text
+                              x={x}
+                              y={y}
+                              fill="#374151"
+                              textAnchor={x > cx ? "start" : "end"}
+                              dominantBaseline="central"
+                              className="text-xs"
+                              style={{ fontWeight: 500 }}
+                            >
+                              {`${shortLabel} (${value})`}
+                            </text>
+                          );
+                        }
+                        
+                        // Desktop view handling
+                        if ((country.includes(' ') && country.length > 10) || 
+                            country === "United Arab" || 
+                            country === "United" || 
+                            country === "United Arab Emirates") {
+                          if (country === "United Arab" || country === "United" || country === "United Arab Emirates") {
+                            return (
+                              <g>
+                                <text
+                                  x={x}
+                                  y={y - 8}
+                                  fill="#374151"
+                                  textAnchor={x > cx ? "start" : "end"}
+                                  dominantBaseline="central"
+                                  className="text-xs"
+                                  style={{ fontWeight: 500 }}
+                                >
+                                  United Arab
+                                </text>
+                                <text
+                                  x={x}
+                                  y={y + 8}
+                                  fill="#374151"
+                                  textAnchor={x > cx ? "start" : "end"}
+                                  dominantBaseline="central"
+                                  className="text-xs"
+                                  style={{ fontWeight: 500 }}
+                                >
+                                  Emirates ({value})
+                                </text>
+                              </g>
+                            );
+                          }
+                          
+                          const words = country.split(' ');
+                          const midpoint = Math.ceil(words.length / 2);
+                          const firstLine = words.slice(0, midpoint).join(' ');
+                          const secondLine = words.slice(midpoint).join(' ') + ` (${value})`;
+                          
+                          return (
+                            <g>
+                              <text
+                                x={x}
+                                y={y - 8}
+                                fill="#374151"
+                                textAnchor={x > cx ? "start" : "end"}
+                                dominantBaseline="central"
+                                className="text-xs"
+                                style={{ fontWeight: 500 }}
+                              >
+                                {firstLine}
+                              </text>
+                              <text
+                                x={x}
+                                y={y + 8}
+                                fill="#374151"
+                                textAnchor={x > cx ? "start" : "end"}
+                                dominantBaseline="central"
+                                className="text-xs"
+                                style={{ fontWeight: 500 }}
+                              >
+                                {secondLine}
+                              </text>
+                            </g>
+                          );
+                        }
+                        
                         return (
                           <text
                             x={x}
@@ -470,8 +730,9 @@ export default function AnalyticsPage() {
                             textAnchor={x > cx ? "start" : "end"}
                             dominantBaseline="central"
                             className="text-xs"
+                            style={{ fontWeight: 500 }}
                           >
-                            {data.topCountries[index].country} ({value})
+                            {`${country} (${value})`}
                           </text>
                         );
                       }}
@@ -529,7 +790,7 @@ export default function AnalyticsPage() {
           {/* Recent Visitors Table */}
           <motion.section variants={fadeIn} className="bg-white rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 overflow-hidden mb-12">
             <div className="px-8 py-6 border-b border-gray-100">
-              <h2 className="text-xl font-semibold text-gray-900">Recent Visitors</h2>
+              <h2 className="text-xl font-semibold text-gray-900">Recent Visitors (Top 10)</h2>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -571,19 +832,36 @@ export default function AnalyticsPage() {
                   ))}
                 </tbody>
               </table>
+              <div className="text-center p-4 text-sm text-gray-500 border-t border-gray-100">
+                Showing the 10 most recent visitors. 
+                <span className="ml-1 text-blue-600 hover:text-blue-800 cursor-pointer" onClick={handleViewAllVisitors}>
+                  View all
+                </span>
+              </div>
             </div>
           </motion.section>
 
           {/* Anomaly Detection */}
-          <motion.section variants={fadeIn} className="bg-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
-            <div className="flex items-center justify-between mb-8">
+          <motion.section id="anomaly-detection" variants={fadeIn} className="bg-gradient-to-br from-slate-50 to-white p-8 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100 scroll-mt-24">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Anomaly Detection</h2>
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center">
+                  <ShieldExclamationIcon className="h-6 w-6 mr-2 text-indigo-600" />
+                  Anomaly Detection
+                </h2>
                 <p className="text-sm text-gray-500 mt-1">Monitoring unusual patterns and suspicious activities</p>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className={`h-2.5 w-2.5 rounded-full ${patterns.anomalies.some(a => a.isAnomaly) ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></div>
-                <span className="text-sm font-medium text-gray-600">
+              <div className={`flex items-center space-x-3 px-4 py-2 rounded-full ${
+                patterns.anomalies.some(a => a.isAnomaly) 
+                  ? 'bg-red-100 text-red-700 border border-red-200' 
+                  : 'bg-green-100 text-green-700 border border-green-200'
+              }`}>
+                <div className={`h-3 w-3 rounded-full ${
+                  patterns.anomalies.some(a => a.isAnomaly) 
+                    ? 'bg-red-500 animate-pulse' 
+                    : 'bg-green-500'
+                }`}></div>
+                <span className="text-sm font-medium">
                   {patterns.anomalies.some(a => a.isAnomaly) ? 'Anomalies Detected' : 'All Systems Normal'}
                 </span>
               </div>
@@ -596,33 +874,37 @@ export default function AnalyticsPage() {
                 .map((anomaly, index) => (
                   <div 
                     key={`anomaly-${index}-${anomaly.score}`} 
-                    className="group relative overflow-hidden bg-gradient-to-r from-red-50 via-red-50 to-orange-50 rounded-2xl border border-red-100 transition-all duration-300 hover:shadow-md"
+                    className="group relative overflow-hidden bg-gradient-to-br from-red-50 via-red-50/70 to-amber-50/70 rounded-2xl border border-red-200 transition-all duration-500 hover:shadow-xl"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03]"></div>
                     <div className="relative p-6">
-                      <div className="flex items-start">
-                        <div className="flex-shrink-0">
-                          <div className="p-2 bg-red-100 rounded-lg">
-                            <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+                      <div className="flex flex-col sm:flex-row items-start">
+                        <div className="flex-shrink-0 mb-4 sm:mb-0">
+                          <div className="p-3 bg-gradient-to-br from-red-100 to-red-200 rounded-xl shadow-sm">
+                            <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
                           </div>
                         </div>
-                        <div className="ml-4 flex-1">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-medium text-red-900">Suspicious Activity Detected</h3>
-                            <div className="flex items-center space-x-2">
-                              <div className="text-sm font-medium text-red-600 bg-red-100 px-3 py-1 rounded-full">
+                        <div className="sm:ml-6 flex-1">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <h3 className="text-xl font-semibold text-red-900">Suspicious Activity Detected</h3>
+                            <div className="inline-flex items-center">
+                              <div className="text-sm font-medium bg-gradient-to-r from-red-500 to-amber-500 text-white px-4 py-1.5 rounded-full shadow-sm">
                                 Score: {(anomaly.score * 100).toFixed(0)}%
                               </div>
                             </div>
                           </div>
-                          <ul className="mt-4 space-y-3">
+                          <ul className="mt-6 space-y-3">
                             {anomaly.reasons.map((reason, i) => (
                               <li 
                                 key={`reason-${index}-${i}`}
-                                className="flex items-center text-red-700 bg-red-100/50 px-4 py-2 rounded-lg"
+                                className="flex items-center bg-white/50 px-5 py-3 rounded-xl border border-red-100 shadow-sm"
                               >
-                                <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-3"></span>
-                                <span className="text-sm">{reason}</span>
+                                <div className="flex-shrink-0 mr-3">
+                                  <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                  </svg>
+                                </div>
+                                <span className="text-red-900 font-medium">{reason}</span>
                               </li>
                             ))}
                           </ul>
@@ -632,17 +914,15 @@ export default function AnalyticsPage() {
                   </div>
                 ))}
               {patterns.anomalies.filter(anomaly => anomaly.isAnomaly).length === 0 && (
-                <div className="relative overflow-hidden bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-8 border border-green-100">
-                  <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-5"></div>
-                  <div className="relative flex items-center justify-center">
-                    <div className="bg-green-100 rounded-full p-3 mr-4">
-                      <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
+                <div className="relative overflow-hidden bg-gradient-to-br from-green-50 to-emerald-50/70 rounded-2xl p-8 border border-green-200 shadow-sm">
+                  <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-[0.03]"></div>
+                  <div className="relative flex flex-col sm:flex-row items-center">
+                    <div className="bg-gradient-to-br from-green-100 to-green-200 rounded-full p-4 mb-4 sm:mb-0 sm:mr-6 shadow-sm">
+                      <CheckCircleIcon className="w-10 h-10 text-green-600" />
                     </div>
-                    <div className="text-left">
-                      <h3 className="text-lg font-medium text-green-900">All Systems Normal</h3>
-                      <p className="text-green-700 mt-1">No suspicious activity detected in recent visits.</p>
+                    <div className="text-center sm:text-left">
+                      <h3 className="text-xl font-semibold text-green-900">All Systems Normal</h3>
+                      <p className="text-green-700 mt-2 max-w-lg">No suspicious activity detected in recent visitor patterns. Your application is functioning normally.</p>
                     </div>
                   </div>
                 </div>

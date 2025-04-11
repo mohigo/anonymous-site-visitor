@@ -62,7 +62,7 @@ export default function PrivacyPage() {
           animate="animate"
         >
           {/* Privacy Approach Section */}
-          <motion.section variants={fadeIn}>
+          <motion.section variants={fadeIn} id="privacy-first-approach" className="scroll-mt-24">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold text-gray-900">Our Privacy-First Approach</h2>
               <DocumentTextIcon className="h-8 w-8 text-blue-600" />
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
           </motion.section>
 
           {/* Machine Learning Section */}
-          <motion.section variants={fadeIn}>
+          <motion.section variants={fadeIn} id="machine-learning-fingerprinting" className="scroll-mt-24">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold text-gray-900">Machine Learning Fingerprinting</h2>
               <FingerPrintIcon className="h-8 w-8 text-blue-600" />

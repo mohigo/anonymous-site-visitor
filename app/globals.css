@@ -12,6 +12,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
+html {
+  scroll-padding-top: 96px; /* Provides space at the top when scrolling to anchors */
+  scroll-behavior: smooth; /* For smooth scrolling to anchors */
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

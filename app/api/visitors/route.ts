@@ -79,20 +79,17 @@ export async function GET() {
     // Get analytics data using MongoDB native operations
     const [
       recentVisitors,
-      topCountries,
+      rawCountryData,
       topBrowsers,
       totalVisitsAgg
     ] = await Promise.all([
-      // Recent visitors - ensure proper date sorting
+      // Recent visitors
       collection.aggregate([
-        {
-          $sort: { lastVisit: -1 }
-        },
-        {
-          $limit: 5
-        },
+        { $sort: { lastVisit: -1 } },
+        { $limit: 10 },
         {
           $project: {
+            _id: 0,
             visitorId: 1,
             firstVisit: 1,
             lastVisit: 1,
@@ -104,15 +101,16 @@ export async function GET() {
         }
       ]).toArray(),
       
-      // Top countries
+      // Get country distribution data
       collection.aggregate([
+        { $match: { country: { $exists: true, $ne: null, $ne: '' } } },
         { $group: { _id: '$country', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
         { $limit: 10 },
         { $project: { country: '$_id', count: 1, _id: 0 } }
       ]).toArray(),
       
-      // Top browsers
+      // Browser distribution data
       collection.aggregate([
         { $group: { _id: '$browser', count: { $sum: 1 } } },
         { $sort: { count: -1 } },
@@ -120,7 +118,7 @@ export async function GET() {
         { $project: { browser: '$_id', count: 1, _id: 0 } }
       ]).toArray(),
 
-      // Total visits - use the same visitCount field
+      // Total visits count
       collection.aggregate([
         {
           $group: {
@@ -130,6 +128,26 @@ export async function GET() {
         }
       ]).toArray()
     ]);
+
+    // Process and normalize country names
+    const topCountries = rawCountryData.map(item => {
+      // Fix any abbreviated or incomplete country names
+      let country = item.country;
+      
+      // Handle special cases for country names
+      if (country === "United Arab" || country === "United") {
+        country = "United Arab Emirates";
+      } else if (country === "USA") {
+        country = "United States";
+      } else if (country === "UK") {
+        country = "United Kingdom";
+      }
+      
+      return {
+        country,
+        count: item.count
+      };
+    });
 
     const uniqueVisitors = await collection.distinct('visitorId');
     const totalVisits = totalVisitsAgg[0]?.totalVisits || 0;
